@@ -27,12 +27,12 @@ scale_down(){
     scale_service ${desired_scale}
 }
 
-resize_up(){
-    echo "resize container with more resources"
+increase_cpu(){
+    # resize container with more CPU resources
 }
 
-resize_down(){
-    echo "resize container with less resources"
+decrease_cpu(){
+    # resize container with less resources
 }
 
 service_ps(){
