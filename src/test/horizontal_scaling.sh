@@ -19,5 +19,3 @@ echo
 echo "scale MyApp servers from 6 to 4"
 bash ../app_scheduler/app_scheduler.sh scale_down consul 6 2
 echo -e "\n\n"
-
-env
