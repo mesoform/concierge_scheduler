@@ -18,7 +18,7 @@ scale_service(){
        --tlscacert=${DOCKER_CERT_PATH}ca.pem --tlskey=${DOCKER_CERT_PATH}key.pem \
        --host tcp://dockerapi-private-lab1.mesoform.com:2376 --file /tmp/docker-compose.yml --project-name dockerlx \
        scale ${service_name}=$1
-    echo "$(date): Scaled ${service_name} from ${current_scale} to $1" >> /tmp/app_scheduler_output
+    echo "$(date): Scaled ${service_name} from ${current_scale} to $1" >> /tmp/concierge_scheduler_output
     exit 0
 }
 
