@@ -128,9 +128,15 @@ def pre_pem_file():
 
 def create_pem_file(inv_property, filename, service_name):
     pem_file = __zbx_api.host.get(output=["host"], selectInventory=[inv_property], searchInventory={"alias": service_name})
-    __info('Generating file {}.pem ...', filename)
+    __info('Constructing file {}.pem from {} inventory...', filename, service_name)
     file = open('{}/{}.pem'.format(DOCKER_CERT_PATH, filename), 'w')
     file.write(pem_file[0]["inventory"][inv_property])
+
+
+def del_pem_file():
+    filelist = [f for f in os.listdir(DOCKER_CERT_PATH) if f.endswith(".pem")]
+    for f in filelist:
+        os.remove(os.path.join(DOCKER_CERT_PATH, f))
 
 
 def scale_service(desired_scale):
@@ -149,12 +155,14 @@ def scale_up(current_scale, increment):
     pre_pem_file()
     desired_scale=(current_scale + increment)
     scale_service(desired_scale)
+    del_pem_file()
 
 
 def scale_down(current_scale, increment):
     pre_pem_file()
     desired_scale=(current_scale - increment)
     scale_service(desired_scale)
+    del_pem_file()
 
 
 def service_ps(*args):
@@ -163,6 +171,7 @@ def service_ps(*args):
                       --tlscacert={}/ca.pem --tlskey={}/key.pem \
                       --host={} --file /tmp/docker-compose.yml --project-name dockerlx \
                       ps".format(DOCKER_CERT_PATH, DOCKER_CERT_PATH, DOCKER_CERT_PATH, DOCKER_HOST).split())
+    del_pem_file()
 
 
 # backups aka exports
