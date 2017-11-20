@@ -307,7 +307,7 @@ def __import_objects(component, import_dir):
             print(err)
 
 
-def __import_actions(component, import_dir):
+def __import_reg_actions(component, import_dir):
     file = '{}/{}.json'.format(import_dir, component)
     with open(file, 'r') as f:
         component_data = f.read()
@@ -319,6 +319,28 @@ def __import_actions(component, import_dir):
             #   __zbx_api.action.create(actions)
             # except ZabbixAPIException as err:
             #   print(err)
+
+
+def __import_trig_actions(component, import_dir):
+    __zbx_api.action.delete("3")
+    file = '{}/{}.json'.format(import_dir, component)
+    with open(file, 'r') as f:
+        component_data = f.read()
+        __info('Importing {}...', component)
+        trig_actions = json.loads(component_data)
+        for action in trig_actions:
+            __zbx_api.action.create(action)
+
+
+def __import_mediatypes(component, import_dir):
+    __zbx_api.mediatype.delete("1", "2", "3")
+    file = '{}/{}.json'.format(import_dir, component)
+    with open(file, 'r') as f:
+        component_data = f.read()
+        __info('Importing {}...', component)
+        mediatypes = json.loads(component_data)
+        for mediatype in mediatypes:
+            __zbx_api.mediatype.create(mediatype)
 
 
 def import_hostgroups(import_dir):
@@ -333,8 +355,16 @@ def import_hosts(import_dir):
     __import_objects('hosts', import_dir)
 
 
-def import_actions(import_dir):
-    __import_actions('reg_actions_import', import_dir)
+def import_reg_actions(import_dir):
+    __import_reg_actions('reg_actions_import', import_dir)
+
+
+def import_trig_actions(import_dir):
+    __import_trig_actions('trigger_actions_import', import_dir)
+
+
+def import_mediatypes(import_dir):
+    __import_mediatypes('mediatypes', import_dir)
 
 
 def import_comp(import_dir, components):
@@ -390,7 +420,7 @@ def get_all(act_line, key, orig, dest):
                 get_all(item, key, orig, dest)
 
 
-def gen_imp_act_file(files_dir):
+def gen_imp_reg_act_file(files_dir):
     actions_file = '{}/reg_actions.json'.format(files_dir)
     actions_orig = '{}/actions_data_orig.json'.format(files_dir)
     actions_dest = '{}/actions_data_dest.json'.format(files_dir)
@@ -412,12 +442,39 @@ def gen_imp_act_file(files_dir):
     actions_data.close()
 
 
+def remove_keys(data):
+    if not isinstance(data, (dict, list)):
+        return data
+    if isinstance(data, list):
+        return [remove_keys(value) for value in data]
+    return {key: remove_keys(value) for key, value in data.items()
+            if key not in {'actionid', 'maintenance_mode', 'eval_formula', 'operationid'}}
+
+
+def gen_imp_trig_act_file(files_dir):
+    actions_file = '{}/trigger_actions.json'.format(files_dir)
+    actions_json = open(actions_file)
+    trigger_actions = json.load(actions_json)
+    data = remove_keys(trigger_actions)
+
+    target_path = '{}/trigger_actions_import.json'.format(files_dir)
+    with open(target_path, "w") as export_file:
+        export_file.write(json.dumps(data))
+
+    actions_json.close()
+
+
 def import_app(import_dir):
     to_import = [import_hostgroups, import_templates, import_hosts]
     import_comp(import_dir, to_import)
     exp_act_data_dest(import_dir)
-    gen_imp_act_file(import_dir)
-    to_import = [import_actions]
+    gen_imp_reg_act_file(import_dir)
+    to_import = [import_reg_actions]
+    import_comp(import_dir, to_import)
+    gen_imp_trig_act_file(import_dir)
+    to_import = [import_trig_actions]
+    import_comp(import_dir, to_import)
+    to_import = [import_mediatypes]
     import_comp(import_dir, to_import)
 
 
