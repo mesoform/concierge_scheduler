@@ -75,6 +75,16 @@ Actions known to the scheduler include the following:
     It only takes one argument: `import_app`
     
     Example: `concierge_scheduler import_app`
+    
+    Logic insight:
+        
+    Different Zabbix API methods are used to import components.
+    * Function `import_hostgroups` imports all hostgroups configuration data from file `hostgroups.json` using the configuration.import method. 
+    * Function `import_templates` imports all templates configuration data from file `templates.json` using the configuration.import method. 
+    * Function `import_hosts` imports all hosts configuration data from file `hosts.json` using the configuration.import method. 
+    * Function `import_reg_actions`
+    * Function `import_trig_actions`
+    * Function `import_mediatypes`
   
 4. **scale_up**: this action will increment the number of containers on a selected component.
 
