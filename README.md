@@ -1,6 +1,6 @@
 # Concierge Scheduler
 
-This part of the Concierge Paradigm concerns how we coordinate the scaling of our services.
+This part of the [Concierge Paradigm](http://www.mesoform.com/blog-listing/info/the-concierge-paradigm) concerns how we coordinate the scaling of our services.
 
 The Concierge acting in the role of concierge_scheduler.sh is taking a request from its client to manage their business schedule. As such when some particular resource gets low, order some more; and when something is no longer being used, get rid of it.
 
