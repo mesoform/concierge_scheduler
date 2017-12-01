@@ -6,7 +6,7 @@ The Concierge acting in the role of concierge_scheduler.sh is taking a request f
 
 ## Environment Variables
 
-Set the following environment variables in the docker-compose yml file:
+Set the following environment variables in the docker-compose.yml file for the Zabbix server service:
 
 `ZBX_API_HOST`: The Zabbix web frontend endpoint \
 `ZBX_USER`: A Zabbix username to access the web API \
@@ -82,9 +82,9 @@ Actions known to the scheduler include the following:
     * Function `import_hostgroups` imports all hostgroups configuration data from file `hostgroups.json` using the configuration.import method. 
     * Function `import_templates` imports all templates configuration data from file `templates.json` using the configuration.import method. 
     * Function `import_hosts` imports all hosts configuration data from file `hosts.json` using the configuration.import method. 
-    * Function `import_reg_actions`
-    * Function `import_trig_actions`
-    * Function `import_mediatypes`
+    * Function `import_reg_actions` imports all auto-registration actions configuration data from file `reg_actions_import.json` using the create method.
+    * Function `import_trig_actions` imports all trigger actions configuration data from file `trigger_actions_import.json` using the create method.
+    * Function `import_mediatypes` imports all mediatypes configuration data from file `mediatypes.json` using the create method.
   
 4. **scale_up**: this action will increment the number of containers on a selected component.
 
