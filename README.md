@@ -91,12 +91,22 @@ Actions known to the scheduler include the following:
     It takes four arguments: `scale_up` + `<component>` + `<current_scale>` + `<increment>`
     
     Example: `concierge_scheduler scale_up consul 1 1`
-  
+
+    Logic insight:
+    
+    Given a component (e.g: consul) which needs to be scaled up, functions `pre_pem_file` and `generate_pem_file` construct certificates from the inventory of a component dummy host containing the relevant data and call function `scale_up` with the current number of containers for the component (`current_scale`) and the number we want to add (`increment`). Once the component is incremented  to the desired scale the certificates will be deleted.
+
 5. **scale_down**: this action will decrease the number of containers on a selected component.
 
     It takes four arguments: `scale_up` + `<component>` + `<current_scale>` + `<decrement>`
   
     Example: `concierge_scheduler scale_down consul 2 1`
-  
+    
+    Logic insight:
+    
+    Given a component (e.g: consul) which needs to be scaled down, functions `pre_pem_file` and `generate_pem_file` construct certificates from the inventory of a component dummy host containing the relevant data and call function `scale_down` with the current number of containers for the component (`current_scale`) and the number we want to reduce (`decrement`). Once the component is decremented to the desired scale the certificates will be deleted.
+    
+## Note
+
 With container infrastructures, like Joyent's Triton, that manage placement of containers and allow containers to be first-class citizen's on the host and network, simply running docker-compose will be fine. However, when running containers on other infrastructures you may need to perform a little extra work to set up Docker Engine in Swarm Mode and scale services using docker service.
 
