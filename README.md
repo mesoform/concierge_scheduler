@@ -1,4 +1,4 @@
-# Concierge Scheduler
+# [Concierge Scheduler](http://www.mesoform.com/blog-listing/info/the-concierge-paradigm/)
 
 This part of the [Concierge Paradigm](http://www.mesoform.com/blog-listing/info/the-concierge-paradigm) concerns how we coordinate the scaling of our services.
 
