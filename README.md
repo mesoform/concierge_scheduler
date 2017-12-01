@@ -11,7 +11,7 @@ Set the following environment variables in the docker-compose.yml file for the Z
 `ZBX_API_HOST`: The Zabbix web frontend endpoint \
 `ZBX_USER`: A Zabbix username to access the web API \
 `ZBX_PASS`: Password for the above Zabbix username \
-`ZBX_CONFIG_DIR`: The source path for the Zabbix backup files 
+`ZBX_CONFIG_DIR`: The source path for the Zabbix backup/export files 
 
 Example:
 ```
@@ -66,7 +66,7 @@ Actions known to the scheduler include the following:
     * Function `export_media_types` exports all mediatypes configuration data to file `mediatypes.json` using the get method.
     * Function `export_auto_registration_actions` exports all auto-registration actions configuration data to file `reg_actions.json` using the get method.
     * Function `export_trigger_actions` exports all trigger actions configuration data to file `trigger_actions.json` using the get method.
-    * Function `export_actions_data` export all templates and hostgroups names and IDs to file `actions_data_orig.json` using get methods. This file can be later used to import auto-registration actions.
+    * Function `export_actions_data` export all templates and hostgroups names and IDs to file `actions_data_orig.json` using get methods. This file can later be used to import auto-registration actions.
   
 3. **import_app**: this action will make an import of the below components using a set of backup files as source from the      assigned configuration directory.
 
