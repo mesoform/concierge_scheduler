@@ -1,7 +1,8 @@
 import os
 import sys
 import logging
-import conciere_docker
+from pyzabbix import ZabbixAPI
+from concierge_docker import DockerAdmin
 from concierge_zabbix import ZabbixAdmin
 
 ACTION = sys.argv[1] if len(sys.argv) > 1 else 0
@@ -36,21 +37,22 @@ def __log_error_and_fail(message, *args):
     sys.exit(-1)
 
 
+def initiate_zabbix_client(zbx_host, zbx_user, zbx_password):
+    zbx_url = 'http://{}'.format(zbx_host)
+    return ZabbixAPI(zbx_url).login(user=zbx_user, password=zbx_password)
+
+
 # main
 if __name__ == '__main__':
-    host = os.getenv('ZBX_API_HOST')
-    user = os.getenv('ZBX_USER')
-    password = os.getenv('ZBX_PASS')
     config_dir = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
-    zbx_admin = ZabbixAdmin(host, user, password)
-    key = zbx_admin
+    zbx_client = initiate_zabbix_client(
+        os.getenv('ZBX_API_HOST'),
+        os.getenv('ZBX_USER'),
+        os.getenv('ZBX_PASS'))
 
     if ACTION in ['scale_up', 'scale_down', 'service_ps']:
-        fn = globals()[ACTION]
-        fn(CURRENT_SCALE, INCREMENT)
+        DockerAdmin(SERVICE_NAME, zbx_client).run(ACTION)
     elif ACTION in ['backup_app', 'import_app']:
-        fn = globals()[ACTION]
-        fn(config_dir)
+        ZabbixAdmin(zbx_client).run(ACTION)
     else:
         __log_error_and_fail('Unknown action {}', ACTION)
-

@@ -1,14 +1,10 @@
 import subprocess
 import os
-from pyzabbix import ZabbixAPI
 
 DOCKER_CERT_PATH = "/tmp/certs"
 DOCKER_HOST = "tcp://us-east-1.docker.joyent.com:2376"
 DOCKER_CLIENT_TIMEOUT = 800
 COMPOSE_HTTP_TIMEOUT = 800
-ZABBIX_HOST = os.getenv('ZBX_API_HOST')
-ZABBIX_USER = os.getenv('ZBX_USER')
-ZABBIX_PASS = os.getenv('ZBX_PASS')
 
 
 class DockerAdmin:
@@ -16,15 +12,13 @@ class DockerAdmin:
 
     """
 
-    def __init__(self, service_name):
+    def __init__(self, service_name, zbx_client):
         """
 
         :param service_name:
         """
         self.service_name = service_name
-        self.zbx_url = 'http://{}'.format(ZABBIX_HOST)
-        self.zbx_api = ZabbixAPI(self.zbx_url).login(
-            user=ZABBIX_USER, password=ZABBIX_PASS)
+        self.zbx_client = zbx_client
         self.key_file = \
             self.create_pem_file('notes', 'key', self.service_name)
         self.cert_file = \
@@ -33,9 +27,9 @@ class DockerAdmin:
             self.create_pem_file('poc_1_notes', 'ca', self.service_name)
 
     def create_pem_file(self, inv_property, filename, service_name):
-        attribute = self.zbx_api.host.get(output=["host"],
-                                          selectInventory=[inv_property],
-                                          searchInventory={
+        attribute = self.zbx_client.host.get(output=["host"],
+                                             selectInventory=[inv_property],
+                                             searchInventory={
                                               "alias": service_name})
         with open('{}/{}.pem'.format(DOCKER_CERT_PATH, filename),
                   'w') as pem_file:
@@ -45,6 +39,10 @@ class DockerAdmin:
     def del_pem_files(self):
         for f in [self.key_file, self.ca_file, self.cert_file]:
             os.remove(os.path.join(DOCKER_CERT_PATH, f))
+
+    @staticmethod
+    def run(action):
+        action()
 
     def scale_service(self, desired_scale):
         subprocess.call(
