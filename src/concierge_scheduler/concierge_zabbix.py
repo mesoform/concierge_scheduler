@@ -67,6 +67,7 @@ __zbx_api = None
 
 class ZabbixAdmin:
     """
+    Class for administering common operational activities for a Zabbix instance
 
     """
 
@@ -138,30 +139,6 @@ class ZabbixAdmin:
 
         self.__export_json_to_file(result, export_dir, export_filename)
 
-    def export_templates(self, export_dir):
-        self.__get_data_and_export_config(
-            'template', 'templateid', 'templates', export_dir, 'templates')
-
-    def export_host_groups(self, export_dir):
-        self.__get_data_and_export_config(
-            'hostgroup', 'groupid', 'groups', export_dir, 'hostgroups')
-
-    def export_hosts(self, export_dir):
-        self.__get_data_and_export_config('host', 'hostid', 'hosts', export_dir,
-                                          'hosts')
-
-    def export_media_types(self, export_dir):
-        self.__get_data_and_export('mediatype', 'extend', export_dir,
-                                   'mediatypes')
-
-    def export_auto_registration_actions(self, export_dir):
-        self.__get_selected_data_and_export(
-            'action', 2, export_dir, 'reg_actions', 'auto-registration actions')
-
-    def export_trigger_actions(self, export_dir):
-        self.__get_selected_data_and_export(
-            'action', 0, export_dir, 'trigger_actions', 'trigger actions')
-
     def export_actions_data(self, export_dir):
         data = defaultdict(list)
 
@@ -179,20 +156,25 @@ class ZabbixAdmin:
         with open(target_path, "w") as export_file:
             export_file.write(json.dumps(data))
 
-    def backup_app(self, export_dir):
+    def backup_config(self, export_dir):
         if not os.path.isdir(export_dir):
             os.makedirs(export_dir)
 
-        for export_fn in [
-            self.export_templates,
-            self.export_host_groups,
-            self.export_hosts,
-            self.export_media_types,
-            self.export_auto_registration_actions,
-            self.export_trigger_actions,
-            self.export_actions_data
-        ]:
-            export_fn(export_dir)
+        self.__get_data_and_export_config('template', 'templateid', 'templates',
+                                          export_dir, 'templates')
+        self.__get_data_and_export_config('hostgroup', 'groupid', 'groups',
+                                          export_dir, 'hostgroups')
+        self.__get_data_and_export_config('host', 'hostid', 'hosts',
+                                          export_dir, 'hosts')
+        self.__get_selected_data_and_export('action', 2, export_dir,
+                                            'reg_actions',
+                                            'auto-registration actions')
+        self.__get_selected_data_and_export('action', 0, export_dir,
+                                            'trigger_actions',
+                                            'trigger actions')
+        self.__get_data_and_export('mediatype', 'extend', export_dir,
+                                   'mediatypes')
+        self.export_actions_data(export_dir)
 
     # imports
 
