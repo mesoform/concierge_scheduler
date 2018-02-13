@@ -217,30 +217,12 @@ class ZabbixAdmin:
             for mediatype in mediatypes:
                 self.zbx_client.mediatype.create(mediatype)
 
-    def import_hostgroups(self, import_dir):
-        self.__import_objects('hostgroups', import_dir)
-
-    def import_templates(self, import_dir):
-        self.__import_objects('templates', import_dir)
-
-    def import_hosts(self, import_dir):
-        self.__import_objects('hosts', import_dir)
-
-    def import_reg_actions(self, import_dir):
-        self.__import_reg_actions('reg_actions_import', import_dir)
-
-    def import_trig_actions(self, import_dir):
-        self.__import_trig_actions('trigger_actions_import', import_dir)
-
-    def import_mediatypes(self, import_dir):
-        self.__import_media_types('mediatypes', import_dir)
-
     @staticmethod
     def import_comp(import_dir, components):
         for import_fn in components:
             import_fn(import_dir)
 
-    def exp_act_data_dest(self, export_dir):
+    def __exp_act_data_dest(self, export_dir):
         data = defaultdict(list)
 
         for template in self.zbx_client.template.get(output="extend"):
@@ -292,26 +274,26 @@ class ZabbixAdmin:
                 if type(item) in (list, dict):
                     self.get_all(item, key, orig, dest)
 
-    def gen_imp_reg_act_file(self, files_dir):
+    @staticmethod
+    def __create_actions_file(actions_dict, files_dir):
+        target_path = '{}/{}.json'.format(files_dir, actions_dict)
+        with open(target_path, "w") as export_file:
+            export_file.write(actions_dict(files_dir))
+
+    def __autoreg_action_dict(self, files_dir):
         actions_file = '{}/reg_actions.json'.format(files_dir)
         actions_orig = '{}/actions_data_orig.json'.format(files_dir)
         actions_dest = '{}/actions_data_dest.json'.format(files_dir)
 
-        actions_data = open(actions_file)
-        data_orig = open(actions_orig)
-        data_dest = open(actions_dest)
-        data = json.load(actions_data)
-        orig = json.load(data_orig)
-        dest = json.load(data_dest)
-        for act_line in data:
-            self.get_all(act_line, 'groupid', orig, dest)
-            self.get_all(act_line, 'templateid', orig, dest)
-
-        target_path = '{}/reg_actions_import.json'.format(files_dir)
-        with open(target_path, "w") as export_file:
-            export_file.write(json.dumps(data))
-
-        actions_data.close()
+        with open(actions_file) as actions_data:
+            data_orig = open(actions_orig)
+            data_dest = open(actions_dest)
+            data = json.load(actions_data)
+            orig = json.load(data_orig)
+            dest = json.load(data_dest)
+            for act_line in data:
+                self.get_all(act_line, 'groupid', orig, dest)
+                self.get_all(act_line, 'templateid', orig, dest)
 
     def remove_keys(self, data):
         if not isinstance(data, (dict, list)):
@@ -322,37 +304,21 @@ class ZabbixAdmin:
                 if key not in {'actionid', 'maintenance_mode', 'eval_formula',
                                'operationid'}}
 
-    def gen_imp_trig_act_file(self, files_dir):
+    def __trigger_action_dict(self, files_dir):
         actions_file = '{}/trigger_actions.json'.format(files_dir)
-        actions_json = open(actions_file)
-        trigger_actions = json.load(actions_json)
-        data = self.remove_keys(trigger_actions)
+        with open(actions_file) as actions_json:
+            return self.remove_keys(json.load(actions_json))
 
-        target_path = '{}/trigger_actions_import.json'.format(files_dir)
-        with open(target_path, "w") as export_file:
-            export_file.write(json.dumps(data))
+    def restore_config(self, import_dir):
+        self.__import_objects('hostgroups', import_dir)
+        self.__import_objects('templates', import_dir)
+        self.__import_objects('hosts', import_dir)
+        self.__exp_act_data_dest(import_dir)
 
-        actions_json.close()
+        self.__create_actions_file('__autoreg_action_dict', import_dir)
+        self.__autoreg_action_dict(import_dir)
+        self.__import_reg_actions('reg_actions_import', import_dir)
 
-    def import_app(self, import_dir):
-        to_import = [
-            self.import_hostgroups,
-            self.import_templates,
-            self.import_hosts
-        ]
-        self.import_comp(import_dir, to_import)
-        self.exp_act_data_dest(import_dir)
-        self.gen_imp_reg_act_file(import_dir)
-        to_import = [
-            self.import_reg_actions
-        ]
-        self.import_comp(import_dir, to_import)
-        self.gen_imp_trig_act_file(import_dir)
-        to_import = [
-            self.import_trig_actions
-        ]
-        self.import_comp(import_dir, to_import)
-        to_import = [
-            self.import_mediatypes
-        ]
-        self.import_comp(import_dir, to_import)
+        self.__create_actions_file('__trigger_action_dict', import_dir)
+        self.__import_trig_actions('__trigger_action_dict', import_dir)
+        self.__import_media_types('mediatypes', import_dir)

@@ -68,13 +68,13 @@ Actions known to the scheduler include the following:
     * Function `export_trigger_actions` exports all trigger actions configuration data to file `trigger_actions.json` using the get method.
     * Function `export_actions_data` export all templates and hostgroups names and IDs to file `actions_data_orig.json` using get methods. This file can later be used to import auto-registration actions.
   
-3. **import_app**: this action will make an import of the below components using a set of backup files as source from the      assigned configuration directory.
+3. **restore_config**: this action will make an import of the below components using a set of backup files as source from the      assigned configuration directory.
 
     List of components: hostgroups, templates, hosts, auto-registration actions, triggers actions, mediatypes.
   
-    It only takes one argument: `import_app`
+    It only takes one argument: `restore_config`
     
-    Example: `concierge_scheduler import_app`
+    Example: `concierge_scheduler restore_config`
     
     Logic insight:
         
@@ -83,10 +83,10 @@ Actions known to the scheduler include the following:
     * Function `import_templates` imports all templates configuration data from file `templates.json` using the configuration.import method. 
     * Function `import_hosts` imports all hosts configuration data from file `hosts.json` using the configuration.import method. 
     * Function `import_reg_actions` imports all auto-registration actions configuration data from file `reg_actions_import.json` using the create method. As we don't know beforehand which IDs will have the `templates` and `hostgroups` created by the above imports and these are necessary to create the auto-registration actions we use the following approach: 
-        * Generate the json file `actions_data_dest.json` with `hostgroups` and `templates` info from the destination Zabbix server (where the import is happening) using the `exp_act_data_dest` function. We already have the json file `actions_data_orig.json` with `hostgroups` and `templates` info from the origin Zabbix server (where the backup/export was done).
-        * Loop through the `reg_actions.json` backup file using function `gen_imp_reg_act_file` to replace the origin `hostgroup` and `template` IDs with the destination IDs using the above generated files and constructing the file `reg_actions_import.json` with the result. Some unnecessary keys are also removed while looping through the file.
+        * Generate the json file `actions_data_dest.json` with `hostgroups` and `templates` info from the destination Zabbix server (where the import is happening) using the `__exp_act_data_dest` function. We already have the json file `actions_data_orig.json` with `hostgroups` and `templates` info from the origin Zabbix server (where the backup/export was done).
+        * Loop through the `reg_actions.json` backup file using function `__autoreg_action_dict` to replace the origin `hostgroup` and `template` IDs with the destination IDs using the above generated files and constructing the file `reg_actions_import.json` with the result. Some unnecessary keys are also removed while looping through the file.
         * Import the auto-registration actions making a request to the action.create method using the newly generated `reg_actions_import.json` file.
-    * Function `import_trig_actions` imports all trigger actions configuration data from file `trigger_actions_import.json` using the create method. Some unnecessary keys are removed from the backup file `trigger_actions.json` using function `gen_imp_trig_act_file` which generates the desired file `trigger_actions_import.json`.
+    * Function `import_trig_actions` imports all trigger actions configuration data from file `trigger_actions_import.json` using the create method. Some unnecessary keys are removed from the backup file `trigger_actions.json` using function `__trigger_action_dict` which generates the desired file `trigger_actions_import.json`.
     * Function `import_mediatypes` imports all mediatypes configuration data from file `mediatypes.json` using the create method.
   
 4. **scale_up**: this action will increment the number of containers on a selected component.
