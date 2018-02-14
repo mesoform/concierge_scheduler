@@ -76,8 +76,8 @@ class ZabbixAdmin:
 
         """
         self.zbx_client = zbx_client
-        self.imported_templates_list = []
-        self.imported_hostgroup_list = []
+        self.imported_template_ids = []
+        self.imported_hostgroup_ids = []
 
     @staticmethod
     def run(action):
@@ -240,31 +240,41 @@ class ZabbixAdmin:
         with open(target_path, "w") as export_file:
             export_file.write(json.dumps(data))
 
-    def get_new_template_list(self):
+    def get_new_template_ids(self):
         """
         Query Zabbix server to get a list of template objects and simplify it to
         a basic id:name map.
         :return: list
         """
+        template_ids = []
         for template_dict in self.zbx_client.template.get(output="extend"):
             template_map = {"templateid": template_dict['templateid'],
                             "host": template_dict['host']}
-            self.imported_templates_list.append(template_map)
-        return self.imported_templates_list
+            template_ids.append(template_map)
+        return template_ids
 
-    def get_new_hostgroup_list(self):
+    def get_new_hostgroup_ids(self):
         """
         Query Zabbix server to get a list of hostgroup objects and simplify it
         to a basic id:name map.
         :return: list
         """
+        hostgroup_ids = []
         for hostgroup_dict in self.zbx_client.hostgroup.get(output="extend"):
             hostgroup_map = {"groupid": hostgroup_dict['groupid'],
                              "name": hostgroup_dict['name']}
-            self.imported_hostgroup_list.append(hostgroup_map)
-        return self.imported_hostgroup_list
+            hostgroup_ids.append(hostgroup_map)
+        return hostgroup_ids
 
     def get_all(self, act_line, key, orig, dest):
+        """
+
+        :param act_line:
+        :param key:
+        :param orig:
+        :param dest:
+        :return:
+        """
         if type(act_line) == str:
             act_line = json.loads(act_line)
 
@@ -309,8 +319,14 @@ class ZabbixAdmin:
             export_file.write(actions_dict(files_dir))
 
     def __autoreg_action_dict(self, files_dir):
+        # the actual registration actions
         actions_file = '{}/reg_actions.json'.format(files_dir)
+        # ToDo:
+        # the original id:name map for templates and hostgroups. This is a file
+        # This is created by export_actions_data(). What if we're simply
+        # importing a set of new actions?
         actions_orig = '{}/actions_data_orig.json'.format(files_dir)
+        # a map of all of the newly created template and hostgroup IDs to names
         actions_dest = '{}/actions_data_dest.json'.format(files_dir)
 
         with open(actions_file) as actions_data:
@@ -322,6 +338,26 @@ class ZabbixAdmin:
             for act_line in data:
                 self.get_all(act_line, 'groupid', orig, dest)
                 self.get_all(act_line, 'templateid', orig, dest)
+
+    def __autoreg_action_dict2(self, files_dir):
+        # ToDo:
+        # maybe these can be one function which doesn't necessarily return
+        # anything
+        self.imported_hostgroup_ids = self.get_new_hostgroup_ids()
+        self.imported_template_ids = self.get_new_template_ids()
+        original_ids = json.load(
+            open('{}/actions_data_orig.json'.format(files_dir)))
+
+        with open('{}/reg_actions.json'.format(files_dir)) as reg_actions:
+            for reg_action in json.load(reg_actions):
+                self.get_all(reg_action,
+                             'groupid',
+                             original_ids,
+                             self.imported_hostgroup_ids)
+                self.get_all(reg_action,
+                             'templateid',
+                             original_ids,
+                             self.imported_template_ids)
 
     def remove_keys(self, data):
         if not isinstance(data, (dict, list)):
