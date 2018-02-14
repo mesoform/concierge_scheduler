@@ -76,6 +76,8 @@ class ZabbixAdmin:
 
         """
         self.zbx_client = zbx_client
+        self.imported_templates_list = []
+        self.imported_hostgroup_list = []
 
     @staticmethod
     def run(action):
@@ -177,7 +179,6 @@ class ZabbixAdmin:
         self.export_actions_data(export_dir)
 
     # imports
-
     def __import_objects(self, component, import_dir):
         import_file = '{}/{}.json'.format(import_dir, component)
         with open(import_file, 'r') as f:
@@ -239,13 +240,40 @@ class ZabbixAdmin:
         with open(target_path, "w") as export_file:
             export_file.write(json.dumps(data))
 
+    def get_new_template_list(self):
+        """
+        Query Zabbix server to get a list of template objects and simplify it to
+        a basic id:name map.
+        :return: list
+        """
+        for template_dict in self.zbx_client.template.get(output="extend"):
+            template_map = {"templateid": template_dict['templateid'],
+                            "host": template_dict['host']}
+            self.imported_templates_list.append(template_map)
+        return self.imported_templates_list
+
+    def get_new_hostgroup_list(self):
+        """
+        Query Zabbix server to get a list of hostgroup objects and simplify it
+        to a basic id:name map.
+        :return: list
+        """
+        for hostgroup_dict in self.zbx_client.hostgroup.get(output="extend"):
+            hostgroup_map = {"groupid": hostgroup_dict['groupid'],
+                             "name": hostgroup_dict['name']}
+            self.imported_hostgroup_list.append(hostgroup_map)
+        return self.imported_hostgroup_list
+
     def get_all(self, act_line, key, orig, dest):
         if type(act_line) == str:
             act_line = json.loads(act_line)
+
         if type(act_line) is dict:
+
             for actjsonkey in act_line.copy():
                 if type(act_line[actjsonkey]) in (list, dict):
                     self.get_all(act_line[actjsonkey], key, orig, dest)
+
                 elif actjsonkey == key:
                     if key == 'templateid':
                         for tmplorig in orig["templates"]:
