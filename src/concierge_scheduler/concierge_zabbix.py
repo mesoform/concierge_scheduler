@@ -313,6 +313,36 @@ class ZabbixAdmin:
                     self.get_all(item, key, orig, dest)
 
     @staticmethod
+    def __update_template_id(reg_action, original_ids, new_ids):
+        for action_key in reg_action.copy():
+            # Maybe move this line into calling method
+            if original_ids['templateid'] == reg_action[action_key]:
+                hostorig = original_ids['host']
+                for new_id in new_ids["templates"]:
+                    if hostorig == new_id['host']:
+                        reg_action[action_key] = new_id[
+                            'templateid']
+
+    @staticmethod
+    def __update_group_id(reg_action, original_ids, new_ids):
+        for action_key in reg_action.copy():
+            # Maybe move this line into calling method
+            if original_ids['groupid'] == reg_action[action_key]:
+                hostorig = original_ids['host']
+                for new_id in new_ids["hostgroups"]:
+                    if hostorig == new_id['host']:
+                        reg_action[action_key] = new_id[
+                            'groupid']
+
+    @staticmethod
+    def __remove_unwanted_action(self, reg_action):
+        for action_key in reg_action.copy():
+            if action_key in (
+                    'actionid', 'maintenance_mode', 'eval_formula',
+                    'operationid'):
+                del reg_action[action_key]
+
+    @staticmethod
     def __create_actions_file(actions_dict, files_dir):
         target_path = '{}/{}.json'.format(files_dir, actions_dict)
         with open(target_path, "w") as export_file:
@@ -350,14 +380,13 @@ class ZabbixAdmin:
 
         with open('{}/reg_actions.json'.format(files_dir)) as reg_actions:
             for reg_action in json.load(reg_actions):
-                self.get_all(reg_action,
-                             'groupid',
-                             original_ids,
-                             self.imported_hostgroup_ids)
-                self.get_all(reg_action,
-                             'templateid',
-                             original_ids,
-                             self.imported_template_ids)
+                self.__update_group_id(reg_action,
+                                       original_ids,
+                                       self.imported_hostgroup_ids)
+                self.__update_template_id(reg_action,
+                                          original_ids,
+                                          self.imported_template_ids)
+                self.__remove_unwanted_action(reg_action)
 
     def remove_keys(self, data):
         if not isinstance(data, (dict, list)):
