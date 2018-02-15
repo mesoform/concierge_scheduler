@@ -78,6 +78,7 @@ class ZabbixAdmin:
         self.zbx_client = zbx_client
         self.imported_template_ids = []
         self.imported_hostgroup_ids = []
+        self.original_ids = {}
 
     @staticmethod
     def run(action):
@@ -266,82 +267,6 @@ class ZabbixAdmin:
             hostgroup_ids.append(hostgroup_map)
         return hostgroup_ids
 
-    def get_all(self, act_line, key, orig, dest):
-        """
-
-        :param act_line:
-        :param key:
-        :param orig:
-        :param dest:
-        :return:
-        """
-        if type(act_line) == str:
-            act_line = json.loads(act_line)
-
-        if type(act_line) is dict:
-
-            for actjsonkey in act_line.copy():
-                if type(act_line[actjsonkey]) in (list, dict):
-                    self.get_all(act_line[actjsonkey], key, orig, dest)
-
-                elif actjsonkey == key:
-                    if key == 'templateid':
-                        for tmplorig in orig["templates"]:
-                            if tmplorig['templateid'] == act_line[actjsonkey]:
-                                hostorig = tmplorig['host']
-                                for tmpldest in dest["templates"]:
-                                    if hostorig == tmpldest['host']:
-                                        act_line[actjsonkey] = tmpldest[
-                                            'templateid']
-                    elif key == 'groupid':
-                        for grporig in orig["hostgroups"]:
-                            if grporig['groupid'] == act_line[actjsonkey]:
-                                hostorig = grporig['name']
-                                for grpdest in dest["hostgroups"]:
-                                    if hostorig == grpdest['name']:
-                                        act_line[actjsonkey] = grpdest[
-                                            'groupid']
-                                break
-                elif actjsonkey != key:
-                    if actjsonkey in (
-                            'actionid', 'maintenance_mode', 'eval_formula',
-                            'operationid'):
-                        del act_line[actjsonkey]
-        elif type(act_line) is list:
-            for item in act_line:
-                if type(item) in (list, dict):
-                    self.get_all(item, key, orig, dest)
-
-    @staticmethod
-    def __update_template_id(reg_action, original_ids, new_ids):
-        for action_key in reg_action.copy():
-            # Maybe move this line into calling method
-            if original_ids['templateid'] == reg_action[action_key]:
-                hostorig = original_ids['host']
-                for new_id in new_ids["templates"]:
-                    if hostorig == new_id['host']:
-                        reg_action[action_key] = new_id[
-                            'templateid']
-
-    @staticmethod
-    def __update_group_id(reg_action, original_ids, new_ids):
-        for action_key in reg_action.copy():
-            # Maybe move this line into calling method
-            if original_ids['groupid'] == reg_action[action_key]:
-                hostorig = original_ids['host']
-                for new_id in new_ids["hostgroups"]:
-                    if hostorig == new_id['host']:
-                        reg_action[action_key] = new_id[
-                            'groupid']
-
-    @staticmethod
-    def __remove_unwanted_action(self, reg_action):
-        for action_key in reg_action.copy():
-            if action_key in (
-                    'actionid', 'maintenance_mode', 'eval_formula',
-                    'operationid'):
-                del reg_action[action_key]
-
     @staticmethod
     def __create_actions_file(actions_dict, files_dir):
         target_path = '{}/{}.json'.format(files_dir, actions_dict)
@@ -349,44 +274,64 @@ class ZabbixAdmin:
             export_file.write(actions_dict(files_dir))
 
     def __autoreg_action_dict(self, files_dir):
-        # the actual registration actions
-        actions_file = '{}/reg_actions.json'.format(files_dir)
-        # ToDo:
-        # the original id:name map for templates and hostgroups. This is a file
-        # This is created by export_actions_data(). What if we're simply
-        # importing a set of new actions?
-        actions_orig = '{}/actions_data_orig.json'.format(files_dir)
-        # a map of all of the newly created template and hostgroup IDs to names
-        actions_dest = '{}/actions_data_dest.json'.format(files_dir)
-
-        with open(actions_file) as actions_data:
-            data_orig = open(actions_orig)
-            data_dest = open(actions_dest)
-            data = json.load(actions_data)
-            orig = json.load(data_orig)
-            dest = json.load(data_dest)
-            for act_line in data:
-                self.get_all(act_line, 'groupid', orig, dest)
-                self.get_all(act_line, 'templateid', orig, dest)
-
-    def __autoreg_action_dict2(self, files_dir):
         # ToDo:
         # maybe these can be one function which doesn't necessarily return
         # anything
         self.imported_hostgroup_ids = self.get_new_hostgroup_ids()
         self.imported_template_ids = self.get_new_template_ids()
-        original_ids = json.load(
+        self.original_ids = json.load(
             open('{}/actions_data_orig.json'.format(files_dir)))
 
         with open('{}/reg_actions.json'.format(files_dir)) as reg_actions:
             for reg_action in json.load(reg_actions):
-                self.__update_group_id(reg_action,
-                                       original_ids,
-                                       self.imported_hostgroup_ids)
-                self.__update_template_id(reg_action,
-                                          original_ids,
-                                          self.imported_template_ids)
-                self.__remove_unwanted_action(reg_action)
+                self.__update_ids(reg_action)
+
+    def __update_ids(self, reg_action):
+        """
+        take a registration action object and recurse into the data to look for
+        IDs which need updating and update them to the new ID of the equivalent
+        hostgroup or template after being imported.
+        :param reg_action: JSON of Zabbix registration action
+        """
+        if type(reg_action) is str:
+            reg_action = json.loads(reg_action)
+
+        if type(reg_action) is dict:
+            for reg_action_key in reg_action.copy():
+                if type(reg_action[reg_action_key]) in (list, dict):
+                    self.__update_ids(reg_action[reg_action_key])
+                elif reg_action_key == 'templateid':
+                    self.__update_template_id(reg_action)
+                elif reg_action_key == 'groupid':
+                    self.__update_group_id(reg_action)
+                elif reg_action_key in (
+                        'actionid', 'maintenance_mode', 'eval_formula',
+                        'operationid'):
+                    del reg_action[reg_action_key]
+                else:
+                    raise KeyError
+        elif type(reg_action) is list:
+            for item in reg_action:
+                if type(item) in (list, dict):
+                    self.__update_ids(item)
+        else:
+            raise TypeError
+
+    def __update_template_id(self, reg_action):
+        for template in self.original_ids["templates"]:
+            if template['templateid'] == reg_action['templateid']:
+                host = template['host']
+                for new_template in self.imported_template_ids:
+                    if host == new_template['host']:
+                        reg_action['templateid'] = new_template['templateid']
+
+    def __update_group_id(self, reg_action):
+        for group in self.original_ids["hostgroups"]:
+            if group['groupid'] == reg_action['groupid']:
+                name = group['name']
+                for new_group in self.imported_hostgroup_ids:
+                    if name == new_group['name']:
+                        reg_action['groupid'] = new_group['groupid']
 
     def remove_keys(self, data):
         if not isinstance(data, (dict, list)):
