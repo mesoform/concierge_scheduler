@@ -3,6 +3,7 @@ import json
 import os
 from collections import defaultdict
 
+_ORIGINAL_IDS_FILE = 'original_ids_map.json'
 _rules = {
     'applications': {
         'createMissing': 'true',
@@ -61,9 +62,6 @@ _rules = {
     }
 }
 
-# zabbix init
-__zbx_api = None
-
 
 class ZabbixAdmin:
     """
@@ -71,7 +69,7 @@ class ZabbixAdmin:
 
     """
 
-    def __init__(self, zbx_client):
+    def __init__(self, zbx_client, data_dir):
         """
 
         """
@@ -79,15 +77,18 @@ class ZabbixAdmin:
         self.imported_template_ids = []
         self.imported_hostgroup_ids = []
         self.original_ids = {}
+        self.data_dir = data_dir
+        self.original_ids_file = '{}/{}'.format(self.data_dir,
+                                                _ORIGINAL_IDS_FILE)
 
     @staticmethod
     def run(action):
         action()
 
     # backups aka exports
-    @staticmethod
-    def __export_json_to_file(result, export_dir, export_filename):
-        target_absolute_path = '{}/{}.json'.format(export_dir, export_filename)
+    def __export_json_to_file(self, result, export_filename):
+        target_absolute_path = '{}/{}.json'.format(self.data_dir,
+                                                   export_filename)
         with open(target_absolute_path, "w") as export_file:
             export_file.write(result)
 
@@ -105,7 +106,7 @@ class ZabbixAdmin:
         return results
 
     def __get_selected_data_and_export(self, component, get_event_source,
-                                       export_dir, export_filename,
+                                       export_filename,
                                        label_for_logging=None):
         results = self.__get_data(component, label_for_logging,
                                   output='extend',
@@ -114,21 +115,19 @@ class ZabbixAdmin:
                                   selectFilter='extend',
                                   filter={'eventsource': get_event_source})
 
-        self.__export_json_to_file(json.dumps(results), export_dir,
-                                   export_filename)
+        self.__export_json_to_file(json.dumps(results), export_filename)
 
     def __get_data_and_export(self, component, get_output,
-                              export_dir, export_filename,
+                              export_filename,
                               label_for_logging=None):
         results = self.__get_data(component, label_for_logging,
                                   output=get_output)
 
-        self.__export_json_to_file(json.dumps(results), export_dir,
-                                   export_filename)
+        self.__export_json_to_file(json.dumps(results), export_filename)
 
     def __get_data_and_export_config(self, component, get_id_prop_name,
                                      export_option_name,
-                                     export_dir, export_filename,
+                                     export_filename,
                                      label_for_logging=None):
         results = self.__get_data(component, label_for_logging,
                                   output=get_id_prop_name)
@@ -140,9 +139,9 @@ class ZabbixAdmin:
         result = self.zbx_client.configuration.export(options=export_options,
                                                       format='json')
 
-        self.__export_json_to_file(result, export_dir, export_filename)
+        self.__export_json_to_file(result, export_filename)
 
-    def export_actions_data(self, export_dir):
+    def get_simple_id_map(self):
         data = defaultdict(list)
 
         for template in self.zbx_client.template.get(output="extend"):
@@ -155,33 +154,28 @@ class ZabbixAdmin:
                           "name": hostgroup['name']}
             data['hostgroups'].append(hostgroups)
 
-        target_path = '{}/actions_data_orig.json'.format(export_dir)
-        with open(target_path, "w") as export_file:
+        with open(self.original_ids_file, "w") as export_file:
             export_file.write(json.dumps(data))
 
-    def backup_config(self, export_dir):
-        if not os.path.isdir(export_dir):
-            os.makedirs(export_dir)
+    def backup_config(self):
+        if not os.path.isdir(self.data_dir):
+            os.makedirs(self.data_dir)
 
         self.__get_data_and_export_config('template', 'templateid', 'templates',
-                                          export_dir, 'templates')
+                                          'templates')
         self.__get_data_and_export_config('hostgroup', 'groupid', 'groups',
-                                          export_dir, 'hostgroups')
-        self.__get_data_and_export_config('host', 'hostid', 'hosts',
-                                          export_dir, 'hosts')
-        self.__get_selected_data_and_export('action', 2, export_dir,
-                                            'reg_actions',
+                                          'hostgroups')
+        self.__get_data_and_export_config('host', 'hostid', 'hosts', 'hosts')
+        self.__get_selected_data_and_export('action', 2, 'reg_actions',
                                             'auto-registration actions')
-        self.__get_selected_data_and_export('action', 0, export_dir,
-                                            'trigger_actions',
+        self.__get_selected_data_and_export('action', 0, 'trigger_actions',
                                             'trigger actions')
-        self.__get_data_and_export('mediatype', 'extend', export_dir,
-                                   'mediatypes')
-        self.export_actions_data(export_dir)
+        self.__get_data_and_export('mediatype', 'extend', 'mediatypes')
+        self.get_simple_id_map()
 
     # imports
-    def __import_objects(self, component, import_dir):
-        import_file = '{}/{}.json'.format(import_dir, component)
+    def __import_objects(self, component):
+        import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
             component_data = f.read()
             # __info('Importing {}...', component)
@@ -190,8 +184,8 @@ class ZabbixAdmin:
             except ZabbixAPIException as err:
                 print(err)
 
-    def __import_reg_actions(self, component, import_dir):
-        import_file = '{}/{}.json'.format(import_dir, component)
+    def __import_reg_actions(self, component):
+        import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
             component_data = f.read()
             # __info('Importing {}...', component)
@@ -199,9 +193,9 @@ class ZabbixAdmin:
             for action in actions:
                 self.zbx_client.action.create(action)
 
-    def __import_trig_actions(self, component, import_dir):
+    def __import_trig_actions(self, component):
         self.zbx_client.action.delete("3")
-        import_file = '{}/{}.json'.format(import_dir, component)
+        import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
             component_data = f.read()
             # __info('Importing {}...', component)
@@ -209,9 +203,9 @@ class ZabbixAdmin:
             for action in trig_actions:
                 self.zbx_client.action.create(action)
 
-    def __import_media_types(self, component, import_dir):
+    def __import_media_types(self, component):
         self.zbx_client.mediatype.delete("1", "2", "3")
-        import_file = '{}/{}.json'.format(import_dir, component)
+        import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
             component_data = f.read()
             # __info('Importing {}...', component)
@@ -219,70 +213,39 @@ class ZabbixAdmin:
             for mediatype in mediatypes:
                 self.zbx_client.mediatype.create(mediatype)
 
-    @staticmethod
-    def import_comp(import_dir, components):
+    def import_comp(self, components):
         for import_fn in components:
-            import_fn(import_dir)
+            import_fn(self.data_dir)
 
-    def __exp_act_data_dest(self, export_dir):
-        data = defaultdict(list)
-
-        for template in self.zbx_client.template.get(output="extend"):
-            templates = {"templateid": template['templateid'],
-                         "host": template['host']}
-            data['templates'].append(templates)
-
-        for hostgroup in self.zbx_client.hostgroup.get(output="extend"):
-            hostgroups = {"groupid": hostgroup['groupid'],
-                          "name": hostgroup['name']}
-            data['hostgroups'].append(hostgroups)
-
-        target_path = '{}/actions_data_dest.json'.format(export_dir)
-        with open(target_path, "w") as export_file:
-            export_file.write(json.dumps(data))
-
-    def get_new_template_ids(self):
+    def get_new_ids(self):
         """
-        Query Zabbix server to get a list of template objects and simplify it to
-        a basic id:name map.
+        Query Zabbix server to get a list of template/group objects and simplify
+        it to a basic id:name map.
         :return: list
         """
-        template_ids = []
         for template_dict in self.zbx_client.template.get(output="extend"):
             template_map = {"templateid": template_dict['templateid'],
                             "host": template_dict['host']}
-            template_ids.append(template_map)
-        return template_ids
+            self.imported_template_ids.append(template_map)
 
-    def get_new_hostgroup_ids(self):
-        """
-        Query Zabbix server to get a list of hostgroup objects and simplify it
-        to a basic id:name map.
-        :return: list
-        """
-        hostgroup_ids = []
         for hostgroup_dict in self.zbx_client.hostgroup.get(output="extend"):
             hostgroup_map = {"groupid": hostgroup_dict['groupid'],
                              "name": hostgroup_dict['name']}
-            hostgroup_ids.append(hostgroup_map)
-        return hostgroup_ids
+            self.imported_hostgroup_ids.append(hostgroup_map)
 
-    @staticmethod
-    def __create_actions_file(actions_dict, files_dir):
-        target_path = '{}/{}.json'.format(files_dir, actions_dict)
+    def __create_actions_file(self, actions_dict):
+        target_path = '{}/{}.json'.format(self.data_dir, actions_dict)
         with open(target_path, "w") as export_file:
-            export_file.write(actions_dict(files_dir))
+            export_file.write(actions_dict(self.data_dir))
 
-    def __autoreg_action_dict(self, files_dir):
+    def __autoreg_action_dict(self):
         # ToDo:
         # maybe these can be one function which doesn't necessarily return
         # anything
-        self.imported_hostgroup_ids = self.get_new_hostgroup_ids()
-        self.imported_template_ids = self.get_new_template_ids()
-        self.original_ids = json.load(
-            open('{}/actions_data_orig.json'.format(files_dir)))
+        self.get_new_ids()
+        self.original_ids = json.load(open(self.original_ids_file))
 
-        with open('{}/reg_actions.json'.format(files_dir)) as reg_actions:
+        with open('{}/reg_actions.json'.format(self.data_dir)) as reg_actions:
             for reg_action in json.load(reg_actions):
                 self.__update_ids(reg_action)
 
@@ -342,21 +305,20 @@ class ZabbixAdmin:
                 if key not in {'actionid', 'maintenance_mode', 'eval_formula',
                                'operationid'}}
 
-    def __trigger_action_dict(self, files_dir):
-        actions_file = '{}/trigger_actions.json'.format(files_dir)
+    def __trigger_action_dict(self):
+        actions_file = '{}/trigger_actions.json'.format(self.data_dir)
         with open(actions_file) as actions_json:
             return self.remove_keys(json.load(actions_json))
 
-    def restore_config(self, import_dir):
-        self.__import_objects('hostgroups', import_dir)
-        self.__import_objects('templates', import_dir)
-        self.__import_objects('hosts', import_dir)
-        self.__exp_act_data_dest(import_dir)
+    def restore_config(self):
+        self.__import_objects('hostgroups')
+        self.__import_objects('templates')
+        self.__import_objects('hosts')
 
-        self.__create_actions_file('__autoreg_action_dict', import_dir)
-        self.__autoreg_action_dict(import_dir)
-        self.__import_reg_actions('reg_actions_import', import_dir)
+        self.__create_actions_file('__autoreg_action_dict')
+        self.__autoreg_action_dict()
+        self.__import_reg_actions('reg_actions_import')
 
-        self.__create_actions_file('__trigger_action_dict', import_dir)
-        self.__import_trig_actions('__trigger_action_dict', import_dir)
-        self.__import_media_types('mediatypes', import_dir)
+        self.__create_actions_file('__trigger_action_dict')
+        self.__import_trig_actions('__trigger_action_dict')
+        self.__import_media_types('mediatypes')

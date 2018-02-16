@@ -53,6 +53,6 @@ if __name__ == '__main__':
     if ACTION in ['scale_up', 'scale_down', 'service_ps']:
         DockerAdmin(SERVICE_NAME, zbx_client).run(ACTION)
     elif ACTION in ['backup_config', 'restore_config']:
-        ZabbixAdmin(zbx_client).run(ACTION)
+        ZabbixAdmin(zbx_client, config_dir).run(ACTION)
     else:
         __log_error_and_fail('Unknown action {}', ACTION)
