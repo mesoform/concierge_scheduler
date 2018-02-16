@@ -5,7 +5,7 @@ import sys
 from collections import defaultdict
 import logging
 
-_ORIGINAL_IDS_FILE = 'original_ids_map.json'
+_ORIGINAL_IDS_FILE = 'id_map_backup.json'
 _rules = {
     'applications': {
         'createMissing': 'true',
@@ -98,7 +98,6 @@ class ZabbixAdmin:
 
     def __init__(self, zbx_client, data_dir):
         """
-
         :param zbx_client:
         :param data_dir:
         """
@@ -132,9 +131,9 @@ class ZabbixAdmin:
         print(results)
         return results
 
-    def __get_selected_data_and_export(self, component, get_event_source,
-                                       export_filename,
-                                       label_for_logging=None):
+    def export_action_config(self, component, get_event_source,
+                             export_filename,
+                             label_for_logging=None):
         results = self.__get_data(component, label_for_logging,
                                   output='extend',
                                   selectOperations='extend',
@@ -144,18 +143,18 @@ class ZabbixAdmin:
 
         self.__export_json_to_file(json.dumps(results), export_filename)
 
-    def __get_data_and_export(self, component, get_output,
-                              export_filename,
-                              label_for_logging=None):
+    def export_media_config(self, component, get_output,
+                            export_filename,
+                            label_for_logging=None):
         results = self.__get_data(component, label_for_logging,
                                   output=get_output)
 
         self.__export_json_to_file(json.dumps(results), export_filename)
 
-    def __get_data_and_export_config(self, component, get_id_prop_name,
-                                     export_option_name,
-                                     export_filename,
-                                     label_for_logging=None):
+    def export_component_config(self, component, get_id_prop_name,
+                                export_option_name,
+                                export_filename,
+                                label_for_logging=None):
         results = self.__get_data(component, label_for_logging,
                                   output=get_id_prop_name)
         print(results)
@@ -189,24 +188,24 @@ class ZabbixAdmin:
             os.makedirs(self.data_dir)
 
         _info('Exporting templates and hostgroups')
-        self.__get_data_and_export_config('template', 'templateid', 'templates',
-                                          'templates')
-        self.__get_data_and_export_config('hostgroup', 'groupid', 'groups',
-                                          'hostgroups')
+        self.export_component_config('template', 'templateid', 'templates',
+                                     'templates')
+        self.export_component_config('hostgroup', 'groupid', 'groups',
+                                     'hostgroups')
         self.get_simple_id_map()
         _info('Exporting hosts')
-        self.__get_data_and_export_config('host', 'hostid', 'hosts', 'hosts')
+        self.export_component_config('host', 'hostid', 'hosts', 'hosts')
         _info('Exporting registration actions')
-        self.__get_selected_data_and_export('action', 2, 'reg_actions',
-                                            'auto-registration actions')
+        self.export_action_config('action', 2, 'reg_actions',
+                                  'auto-registration actions')
         _info('Exporting trigger actions')
-        self.__get_selected_data_and_export('action', 0, 'trigger_actions',
-                                            'trigger actions')
+        self.export_action_config('action', 0, 'trigger_actions',
+                                  'trigger actions')
         _info('Exporting media types')
-        self.__get_data_and_export('mediatype', 'extend', 'mediatypes')
+        self.export_media_config('mediatype', 'extend', 'mediatypes')
 
     # imports
-    def __import_objects(self, component):
+    def import_components(self, component):
         import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
             component_data = f.read()
@@ -216,7 +215,7 @@ class ZabbixAdmin:
             except ZabbixAPIException as err:
                 print(err)
 
-    def __import_reg_actions(self, component):
+    def import_reg_actions(self, component):
         import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
             component_data = f.read()
@@ -225,7 +224,7 @@ class ZabbixAdmin:
             for action in actions:
                 self.zbx_client.action.create(action)
 
-    def __import_trig_actions(self, component):
+    def import_trig_actions(self, component):
         self.zbx_client.action.delete("3")
         import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
@@ -235,7 +234,7 @@ class ZabbixAdmin:
             for action in trig_actions:
                 self.zbx_client.action.create(action)
 
-    def __import_media_types(self, component):
+    def import_media_types(self, component):
         self.zbx_client.mediatype.delete("1", "2", "3")
         import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
@@ -244,10 +243,6 @@ class ZabbixAdmin:
             mediatypes = json.loads(component_data)
             for mediatype in mediatypes:
                 self.zbx_client.mediatype.create(mediatype)
-
-    def import_comp(self, components):
-        for import_fn in components:
-            import_fn(self.data_dir)
 
     def get_new_ids(self):
         """
@@ -325,33 +320,33 @@ class ZabbixAdmin:
                     if name == new_group['name']:
                         reg_action['groupid'] = new_group['groupid']
 
-    def remove_keys(self, data):
+    def __remove_keys(self, data):
         if not isinstance(data, (dict, list)):
             return data
         if isinstance(data, list):
-            return [self.remove_keys(value) for value in data]
-        return {key: self.remove_keys(value) for key, value in data.items()
+            return [self.__remove_keys(value) for value in data]
+        return {key: self.__remove_keys(value) for key, value in data.items()
                 if key not in {'actionid', 'maintenance_mode', 'eval_formula',
                                'operationid'}}
 
     def __trigger_action_dict(self):
         actions_file = '{}/trigger_actions.json'.format(self.data_dir)
         with open(actions_file) as actions_json:
-            return self.remove_keys(json.load(actions_json))
+            return self.__remove_keys(json.load(actions_json))
 
     def restore_config(self):
         _info('Importing hostgroups')
-        self.__import_objects('hostgroups')
+        self.import_components('hostgroups')
         _info('Importing templates')
-        self.__import_objects('templates')
+        self.import_components('templates')
         _info('Importing hosts')
-        self.__import_objects('hosts')
+        self.import_components('hosts')
         _info('Importing registration actions')
         self.__create_actions_file('__autoreg_action_dict')
         self.__autoreg_action_dict()
-        self.__import_reg_actions('reg_actions_import')
+        self.import_reg_actions('reg_actions_import')
         _info('Importing trigger actions')
         self.__create_actions_file('__trigger_action_dict')
-        self.__import_trig_actions('__trigger_action_dict')
+        self.import_trig_actions('__trigger_action_dict')
         _info('Importing media types')
-        self.__import_media_types('mediatypes')
+        self.import_media_types('mediatypes')
