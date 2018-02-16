@@ -1,7 +1,9 @@
 from pyzabbix import ZabbixAPIException
 import json
 import os
+import sys
 from collections import defaultdict
+import logging
 
 _ORIGINAL_IDS_FILE = 'original_ids_map.json'
 _rules = {
@@ -63,15 +65,42 @@ _rules = {
 }
 
 
+# logging
+def get_logger(name):
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+
+    stream = logging.StreamHandler()
+    fmt = logging.Formatter('%(asctime)s [%(threadName)s] '
+                            '[%(name)s] %(levelname)s: %(message)s')
+    stream.setFormatter(fmt)
+    logger.addHandler(stream)
+
+    return logger
+
+
+__LOG = get_logger(__name__)
+
+
+def _info(message, *args):
+    __LOG.log(logging.INFO, message.format(*args))
+
+
+def _log_error_and_fail(message, *args):
+    __LOG.log(logging.ERROR, message.format(*args))
+    sys.exit(-1)
+
+
 class ZabbixAdmin:
     """
     Class for administering common operational activities for a Zabbix instance
-
     """
 
     def __init__(self, zbx_client, data_dir):
         """
 
+        :param zbx_client:
+        :param data_dir:
         """
         self.zbx_client = zbx_client
         self.imported_template_ids = []
@@ -93,14 +122,12 @@ class ZabbixAdmin:
             export_file.write(result)
 
     def __get_data(self, component, label_for_logging=None, **kwargs):
-        # if not label_for_logging:
-        # label_for_logging = '{}s'.format(component)
-        # __info('Exporting {}...', label_for_logging)
-        # getattr is like concatenating component onto the object.
-        # In this case ZabbixAPI.template
+        if not label_for_logging:
+            label_for_logging = '{}s'.format(component)
+        _info('Exporting {}...', label_for_logging)
         results = getattr(self.zbx_client, component).get(**kwargs)
         if not results:
-            # __info('No {} found', label_for_logging)
+            _info('No {} found', label_for_logging)
             return
         print(results)
         return results
@@ -161,24 +188,29 @@ class ZabbixAdmin:
         if not os.path.isdir(self.data_dir):
             os.makedirs(self.data_dir)
 
+        _info('Exporting templates and hostgroups')
         self.__get_data_and_export_config('template', 'templateid', 'templates',
                                           'templates')
         self.__get_data_and_export_config('hostgroup', 'groupid', 'groups',
                                           'hostgroups')
+        self.get_simple_id_map()
+        _info('Exporting hosts')
         self.__get_data_and_export_config('host', 'hostid', 'hosts', 'hosts')
+        _info('Exporting registration actions')
         self.__get_selected_data_and_export('action', 2, 'reg_actions',
                                             'auto-registration actions')
+        _info('Exporting trigger actions')
         self.__get_selected_data_and_export('action', 0, 'trigger_actions',
                                             'trigger actions')
+        _info('Exporting media types')
         self.__get_data_and_export('mediatype', 'extend', 'mediatypes')
-        self.get_simple_id_map()
 
     # imports
     def __import_objects(self, component):
         import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
             component_data = f.read()
-            # __info('Importing {}...', component)
+            _info('Importing {}...', component)
             try:
                 self.zbx_client.confimport('json', component_data, _rules)
             except ZabbixAPIException as err:
@@ -188,7 +220,7 @@ class ZabbixAdmin:
         import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
             component_data = f.read()
-            # __info('Importing {}...', component)
+            _info('Importing {}...', component)
             actions = json.loads(component_data)
             for action in actions:
                 self.zbx_client.action.create(action)
@@ -198,7 +230,7 @@ class ZabbixAdmin:
         import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
             component_data = f.read()
-            # __info('Importing {}...', component)
+            _info('Importing {}...', component)
             trig_actions = json.loads(component_data)
             for action in trig_actions:
                 self.zbx_client.action.create(action)
@@ -208,7 +240,7 @@ class ZabbixAdmin:
         import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
             component_data = f.read()
-            # __info('Importing {}...', component)
+            _info('Importing {}...', component)
             mediatypes = json.loads(component_data)
             for mediatype in mediatypes:
                 self.zbx_client.mediatype.create(mediatype)
@@ -239,9 +271,6 @@ class ZabbixAdmin:
             export_file.write(actions_dict(self.data_dir))
 
     def __autoreg_action_dict(self):
-        # ToDo:
-        # maybe these can be one function which doesn't necessarily return
-        # anything
         self.get_new_ids()
         self.original_ids = json.load(open(self.original_ids_file))
 
@@ -311,14 +340,18 @@ class ZabbixAdmin:
             return self.remove_keys(json.load(actions_json))
 
     def restore_config(self):
+        _info('Importing hostgroups')
         self.__import_objects('hostgroups')
+        _info('Importing templates')
         self.__import_objects('templates')
+        _info('Importing hosts')
         self.__import_objects('hosts')
-
+        _info('Importing registration actions')
         self.__create_actions_file('__autoreg_action_dict')
         self.__autoreg_action_dict()
         self.__import_reg_actions('reg_actions_import')
-
+        _info('Importing trigger actions')
         self.__create_actions_file('__trigger_action_dict')
         self.__import_trig_actions('__trigger_action_dict')
+        _info('Importing media types')
         self.__import_media_types('mediatypes')

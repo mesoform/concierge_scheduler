@@ -1,10 +1,38 @@
 import subprocess
 import os
+import sys
+import logging
 
 DOCKER_CERT_PATH = "/tmp/certs"
 DOCKER_HOST = "tcp://us-east-1.docker.joyent.com:2376"
 DOCKER_CLIENT_TIMEOUT = 800
 COMPOSE_HTTP_TIMEOUT = 800
+
+
+# logging
+def get_logger(name):
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+
+    stream = logging.StreamHandler()
+    fmt = logging.Formatter('%(asctime)s [%(threadName)s] '
+                            '[%(name)s] %(levelname)s: %(message)s')
+    stream.setFormatter(fmt)
+    logger.addHandler(stream)
+
+    return logger
+
+
+__LOG = get_logger(__name__)
+
+
+def __info(message, *args):
+    __LOG.log(logging.INFO, message.format(*args))
+
+
+def __log_error_and_fail(message, *args):
+    __LOG.log(logging.ERROR, message.format(*args))
+    sys.exit(-1)
 
 
 class DockerAdmin:

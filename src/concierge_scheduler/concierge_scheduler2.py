@@ -39,6 +39,7 @@ def __log_error_and_fail(message, *args):
 
 def initiate_zabbix_client(zbx_host, zbx_user, zbx_password):
     zbx_url = 'http://{}'.format(zbx_host)
+    __info('Logging in using url={} ...', zbx_url)
     return ZabbixAPI(zbx_url).login(user=zbx_user, password=zbx_password)
 
 
@@ -49,6 +50,7 @@ if __name__ == '__main__':
         os.getenv('ZBX_API_HOST'),
         os.getenv('ZBX_USER'),
         os.getenv('ZBX_PASS'))
+    __info('Connected to Zabbix API Version {}', zbx_client.api_version())
 
     if ACTION in ['scale_up', 'scale_down', 'service_ps']:
         DockerAdmin(SERVICE_NAME, zbx_client).run(ACTION)
