@@ -39,15 +39,15 @@ COMPOSE_HTTP_TIMEOUT = 800
 
 Actions known to the scheduler include the following:
 
-1. **service_ps**: this action will run `docker-compose ps` and provide a list of what containers are currently running.
+1. **list**: this action will run `docker-compose ps` and provide a list of what containers are currently running.
 
-    It takes two arguments: `service_ps` + `<component>`
+    It takes two arguments: `list` + `<component>`
     
-    Example: `concierge_scheduler service_ps consul`
+    Example: `concierge_scheduler list consul`
     
     Logic insight:
     
-    Given a component (e.g: consul), functions `pre_pem_file` and `generate_pem_file` construct certificates from the inventory of a component dummy host containing the relevant data and call function `service_ps` to provide the list of running containers. Once the result is provided the certificates will be deleted.
+    Given a component (e.g: consul), functions `pre_pem_file` and `generate_pem_file` construct certificates from the inventory of a component dummy host containing the relevant data and call function `list` to provide the list of running containers. Once the result is provided the certificates will be deleted.
   
 2. **backup_config**: this action will make an export of the below components existing in Zabbix.
 

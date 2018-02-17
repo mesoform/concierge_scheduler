@@ -4,7 +4,6 @@ import sys
 import logging
 
 DOCKER_CERT_PATH = "/tmp/certs"
-DOCKER_HOST = "tcp://us-east-1.docker.joyent.com:2376"
 DOCKER_CLIENT_TIMEOUT = 800
 COMPOSE_HTTP_TIMEOUT = 800
 
@@ -40,12 +39,22 @@ class DockerAdmin:
 
     """
 
-    def __init__(self, service_name, zbx_client):
+    def __init__(self,
+                 zbx_client,
+                 data_center,
+                 project,
+                 service_name,
+                 current_scale=None,
+                 delta=None):
         """
 
         :param service_name:
         """
+        self.current_scale = current_scale
+        self.delta = delta
         self.service_name = service_name
+        self.project = project
+        self.data_center = data_center
         self.zbx_client = zbx_client
         self.key_file = \
             self.create_pem_file('notes', 'key', self.service_name)
@@ -53,12 +62,25 @@ class DockerAdmin:
             self.create_pem_file('poc_1_notes', 'cert', self.service_name)
         self.ca_file = \
             self.create_pem_file('poc_1_notes', 'ca', self.service_name)
+        self.service_cmd_template = \
+            '/usr/local/bin/docker-compose ' \
+            '--tlsverify ' \
+            '--tlscert={} ' \
+            '--tlscacert={} ' \
+            '--tlskey={} ' \
+            '--host={} ' \
+            '--file /tmp/docker-compose.yml ' \
+            '--project-name {} '.format(self.cert_file,
+                                        self.key_file,
+                                        self.ca_file,
+                                        self.data_center,
+                                        self.project)
 
     def create_pem_file(self, inv_property, filename, service_name):
         attribute = self.zbx_client.host.get(output=["host"],
                                              selectInventory=[inv_property],
                                              searchInventory={
-                                              "alias": service_name})
+                                                 "alias": service_name})
         with open('{}/{}.pem'.format(DOCKER_CERT_PATH, filename),
                   'w') as pem_file:
             pem_file.write(attribute[0]["inventory"][inv_property])
@@ -74,45 +96,25 @@ class DockerAdmin:
 
     def scale_service(self, desired_scale):
         subprocess.call(
-            "/usr/local/bin/docker-compose "
-            "--tlsverify "
-            "--tlscert={} "
-            "--tlscacert={} "
-            "--tlskey={} "
-            "--host={} "
-            "--file /tmp/docker-compose.yml "
-            "--project-name dockerlx "
-            "up -d "
-            "--scale {}={}".format(
-                self.cert_file,
-                self.key_file,
-                self.ca_file,
-                DOCKER_HOST,
+            str(self.service_cmd_template + 'up -d --scale {}={}'.format(
                 self.service_name,
-                desired_scale).split())
+                desired_scale)))
         self.del_pem_files()
 
-    def scale_up(self, current_scale, increment):
-        desired_scale = (current_scale + increment)
+    def scale_up(self):
+        desired_scale = (self.current_scale + self.delta)
         self.scale_service(desired_scale)
 
-    def scale_down(self, current_scale, increment):
-        desired_scale = (current_scale - increment)
+    def scale_down(self):
+        desired_scale = (self.current_scale - self.delta)
         self.scale_service(desired_scale)
 
-    def service_ps(self):
-        subprocess.call(
-            "/usr/local/bin/docker-compose "
-            "--tlsverify "
-            "--tlscert={}/cert.pem "
-            "--tlscacert={}/ca.pem "
-            "--tlskey={}/key.pem "
-            "--host={} "
-            "--file /tmp/docker-compose.yml "
-            "--project-name dockerlx "
-            "ps".format(
-                DOCKER_CERT_PATH,
-                DOCKER_CERT_PATH,
-                DOCKER_CERT_PATH,
-                DOCKER_HOST).split())
+    def list(self):
+        """
+        provide a list of containers running in a given project
+        :return: list
+        """
+        container_list = subprocess.call(
+            str(self.service_cmd_template + 'ps -q'))
         self.del_pem_files()
+        return container_list
