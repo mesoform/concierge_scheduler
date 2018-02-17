@@ -4,9 +4,12 @@ import logging
 import argparse
 from pyzabbix import ZabbixAPI
 from concierge_docker import DockerAdmin
-from concierge_zabbix import ZabbixAdmin
+from concierge_zabbix import ZabbixAdmin, ZabbixAPIException
 
 # DOCKER_URL = "tcp://us-east-1.docker.joyent.com:2376"
+__CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
+__EM_CLIENT = object
+__EM_ADMIN = object
 
 
 def arg_parser():
@@ -82,7 +85,16 @@ def arg_parser():
 
     root_parser = argparse.ArgumentParser(
         description='Script to construct and automate common actions on an'
-                    ' event management system maintaining Docker containers')
+                    ' event management system maintaining containers')
+    root_parser.add_argument(
+        '--event-engine',
+        help='event management engine used for managing containers.'
+             ' DEFAULT=zabbix',
+        default='zabbix')
+    root_parser.add_argument(
+        '--container-engine',
+        help='container engine used for managing containers. DEFAULT=docker',
+        default='docker')
 
     mgmt_parser = \
         root_parser.add_subparsers(help='management system to control')
@@ -124,28 +136,38 @@ def __log_error_and_fail(message, *args):
     sys.exit(-1)
 
 
-def initiate_zabbix_client(zbx_host, zbx_user, zbx_password):
-    zbx_url = 'http://{}'.format(zbx_host)
-    __info('Logging in using url={} ...', zbx_url)
-    return ZabbixAPI(zbx_url).login(user=zbx_user, password=zbx_password)
+def initiate_zabbix_client():
+    """
+    create an instance of Zabbix API client
+    :return: object
+    """
+    try:
+        zbx_url = 'http://{}'.format(os.getenv('ZBX_API_HOST'))
+        __info('Logging in using url={} ...', zbx_url)
+        zbx_client = ZabbixAPI(zbx_url).login(user=os.getenv('ZBX_USER'),
+                                              password=os.getenv('ZBX_PASS'))
+        __info('Connected to Zabbix API Version {}', zbx_client.api_version())
+    except ZabbixAPIException:
+        raise ZabbixAPIException
+    return zbx_client
 
 
 # main
 if __name__ == '__main__':
     # Capture arguments passed to module
     cmd_args = arg_parser()
-    config_dir = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
-    zbx_client = initiate_zabbix_client(
-        os.getenv('ZBX_API_HOST'),
-        os.getenv('ZBX_USER'),
-        os.getenv('ZBX_PASS'))
-    __info('Connected to Zabbix API Version {}', zbx_client.api_version())
+    if cmd_args.event_engine == 'zabbix':
+        __EM_CLIENT = initiate_zabbix_client()
+        __EM_ADMIN = ZabbixAdmin(__EM_CLIENT, __CONFIG_DIR).run(
+            cmd_args.command)
 
     if cmd_args.command in ['scale_up', 'scale_down', 'list']:
-        DockerAdmin(zbx_client, cmd_args.datacenter_url, cmd_args.project,
-                    cmd_args.service_name, cmd_args.current_scale,
-                    cmd_args.scale_delta).run(cmd_args.command)
+        if cmd_args.container_engine == 'docker':
+            DockerAdmin(__EM_CLIENT, cmd_args.datacenter_url, cmd_args.project,
+                        cmd_args.service_name, cmd_args.current_scale,
+                        cmd_args.scale_delta).run(cmd_args.command)
     elif cmd_args.command in ['backup_config', 'restore_config']:
-        ZabbixAdmin(zbx_client, config_dir).run(cmd_args.command)
+        if cmd_args.event_engine == 'zabbix':
+            __EM_ADMIN.run(cmd_args.command)
     else:
         __log_error_and_fail('Unknown action {}', cmd_args.command)
