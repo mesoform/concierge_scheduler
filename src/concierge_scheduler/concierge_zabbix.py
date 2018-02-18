@@ -263,10 +263,7 @@ class ZabbixAdmin:
         with open(import_file, 'r') as f:
             component_data = f.read()
             _info('Importing {}...', component)
-            try:
-                self.zbx_client.confimport('json', component_data, _rules)
-            except ZabbixAPIException as err:
-                print(err)
+            self.zbx_client.confimport('json', component_data, _rules)
 
     def __update_actions_dict(self):
         with open('{}/reg_actions.json'.format(self.data_dir)) as reg_actions:
