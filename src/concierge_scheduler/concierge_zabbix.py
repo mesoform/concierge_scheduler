@@ -98,8 +98,8 @@ class ZabbixAdmin:
 
     def __init__(self, zbx_client, data_dir):
         """
-        :param zbx_client:
-        :param data_dir:
+        :param zbx_client: instance of a Zabbix API client object
+        :param data_dir: directory where we will keep configuration data
         """
         self.zbx_client = zbx_client
         self.imported_template_ids = []
@@ -108,6 +108,7 @@ class ZabbixAdmin:
         self.data_dir = data_dir
         self.original_ids_file = '{}/{}'.format(self.data_dir,
                                                 _ORIGINAL_IDS_FILE)
+        self.actions_dict = {}
 
     @staticmethod
     def run(action):
@@ -128,37 +129,70 @@ class ZabbixAdmin:
         if not results:
             _info('No {} found', label_for_logging)
             return
-        print(results)
+        _info('results' + results, label_for_logging)
         return results
 
-    def export_action_config(self, component, get_event_source,
+    def export_action_config(self, event_source_id,
                              export_filename,
                              label_for_logging=None):
-        results = self.__get_data(component, label_for_logging,
+        """
+        create a JSON file backup of the Zabbix actions configuration
+
+        :param event_source_id: the ID of the type of action we want to export.
+            E.g. 0 = trigger actions, 1 = discovery actions,
+             2 = auto-registration actions, 3 = internal actions
+        :param export_filename: the name to use for the output file
+        :param label_for_logging: label we'll use when logging
+        :return: file
+        """
+        results = self.__get_data('action', label_for_logging,
                                   output='extend',
                                   selectOperations='extend',
                                   selectRecoveryOperations='extend',
                                   selectFilter='extend',
-                                  filter={'eventsource': get_event_source})
+                                  filter={'eventsource': event_source_id})
 
         self.__export_json_to_file(json.dumps(results), export_filename)
 
-    def export_media_config(self, component, get_output,
+    def export_media_config(self, component,
                             export_filename,
                             label_for_logging=None):
+        """
+        create a JSON file backup of the Zabbix media configuration
+
+        :param component: what media we want to export. E.g. mediatypes
+        :param export_filename: the name to use for the output file
+        :param label_for_logging: label we'll use when logging
+        :return: file
+        """
         results = self.__get_data(component, label_for_logging,
-                                  output=get_output)
+                                  output='extend')
 
         self.__export_json_to_file(json.dumps(results), export_filename)
 
-    def export_component_config(self, component, get_id_prop_name,
+    def export_component_config(self, component, id_prop_name,
                                 export_option_name,
                                 export_filename,
                                 label_for_logging=None):
+        """
+        create a JSON file backup of Zabbix components like templates or hosts
+
+        :param component: which component to export. E.g. hosts, hostgroups,
+                        templates
+        :param id_prop_name: the property name ehere our component IDs are
+                        found. E.g. hostgroups = groupid
+        :param export_option_name: there isn't a like-for-like map of the export
+                option name and component name. E.g. templates = templates, but
+                hostgroups = groups. Also, it is possible to specify a list of
+                particular components to export. E.g. "hosts" ["10452", "12451"]
+        :param export_filename: the name to use for the output file
+        :param label_for_logging: label we'll use when logging
+        :return: file
+        """
         results = self.__get_data(component, label_for_logging,
-                                  output=get_id_prop_name)
+                                  output=id_prop_name)
         print(results)
-        component_ids = [component[get_id_prop_name] for component in results]
+        component_ids = [component[id_prop_name] for component in results]
 
         export_options = {export_option_name: component_ids}
         print(export_options)
@@ -168,6 +202,14 @@ class ZabbixAdmin:
         self.__export_json_to_file(result, export_filename)
 
     def get_simple_id_map(self):
+        """
+        we need to have a simplified map of component IDs to their names because
+        when we're importing things like auto-registration actions, we need to
+        know what our old and new IDs are so we can correctly link them upon
+        import
+
+        :return: file
+        """
         data = defaultdict(list)
 
         for template in self.zbx_client.template.get(output="extend"):
@@ -184,6 +226,11 @@ class ZabbixAdmin:
             export_file.write(json.dumps(data))
 
     def backup_config(self):
+        """
+        Backup all of our application configuration
+
+        :return: files
+        """
         if not os.path.isdir(self.data_dir):
             os.makedirs(self.data_dir)
 
@@ -196,16 +243,22 @@ class ZabbixAdmin:
         _info('Exporting hosts')
         self.export_component_config('host', 'hostid', 'hosts', 'hosts')
         _info('Exporting registration actions')
-        self.export_action_config('action', 2, 'reg_actions',
+        self.export_action_config(2, 'reg_actions',
                                   'auto-registration actions')
         _info('Exporting trigger actions')
-        self.export_action_config('action', 0, 'trigger_actions',
+        self.export_action_config(0, 'trigger_actions',
                                   'trigger actions')
         _info('Exporting media types')
-        self.export_media_config('mediatype', 'extend', 'mediatypes')
+        self.export_media_config('mediatype', 'mediatypes')
 
     # imports
     def import_components(self, component):
+        """
+        import a JSON file backup of Zabbix components like templates or hosts
+
+        :param component: which component to import. E.g. hosts, hostgroups,
+                        templates
+        """
         import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
             component_data = f.read()
@@ -215,26 +268,34 @@ class ZabbixAdmin:
             except ZabbixAPIException as err:
                 print(err)
 
-    def import_reg_actions(self, component):
-        import_file = '{}/{}.json'.format(self.data_dir, component)
-        with open(import_file, 'r') as f:
-            component_data = f.read()
-            _info('Importing {}...', component)
-            actions = json.loads(component_data)
-            for action in actions:
-                self.zbx_client.action.create(action)
+    def __update_actions_dict(self):
+        with open('{}/reg_actions.json'.format(self.data_dir)) as reg_actions:
+            for reg_action in json.load(reg_actions):
+                self.actions_dict.update(self.__update_ids(reg_action))
+        with open('{}/trigger_actions.json'.format(
+                self.data_dir)) as actions_json:
+            self.actions_dict.update(
+                self.__remove_keys(json.load(actions_json)))
 
-    def import_trig_actions(self, component):
+    def import_actions(self):
+        """
+        import auto-registration and trigger actions from backup file
+
+        """
+        self.get_new_ids()
+        self.original_ids = json.load(open(self.original_ids_file))
+        self.__update_actions_dict()
         self.zbx_client.action.delete("3")
-        import_file = '{}/{}.json'.format(self.data_dir, component)
-        with open(import_file, 'r') as f:
-            component_data = f.read()
-            _info('Importing {}...', component)
-            trig_actions = json.loads(component_data)
-            for action in trig_actions:
-                self.zbx_client.action.create(action)
+        for action in self.actions_dict:
+            self.zbx_client.action.create(action)
 
     def import_media_types(self, component):
+        """
+        import backed up media
+
+        :param component: what media to import
+        :return:
+        """
         self.zbx_client.mediatype.delete("1", "2", "3")
         import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
@@ -259,19 +320,6 @@ class ZabbixAdmin:
             hostgroup_map = {"groupid": hostgroup_dict['groupid'],
                              "name": hostgroup_dict['name']}
             self.imported_hostgroup_ids.append(hostgroup_map)
-
-    def __create_actions_file(self, actions_dict):
-        target_path = '{}/{}.json'.format(self.data_dir, actions_dict)
-        with open(target_path, "w") as export_file:
-            export_file.write(actions_dict(self.data_dir))
-
-    def __autoreg_action_dict(self):
-        self.get_new_ids()
-        self.original_ids = json.load(open(self.original_ids_file))
-
-        with open('{}/reg_actions.json'.format(self.data_dir)) as reg_actions:
-            for reg_action in json.load(reg_actions):
-                self.__update_ids(reg_action)
 
     def __update_ids(self, reg_action):
         """
@@ -329,11 +377,6 @@ class ZabbixAdmin:
                 if key not in {'actionid', 'maintenance_mode', 'eval_formula',
                                'operationid'}}
 
-    def __trigger_action_dict(self):
-        actions_file = '{}/trigger_actions.json'.format(self.data_dir)
-        with open(actions_file) as actions_json:
-            return self.__remove_keys(json.load(actions_json))
-
     def restore_config(self):
         _info('Importing hostgroups')
         self.import_components('hostgroups')
@@ -341,12 +384,7 @@ class ZabbixAdmin:
         self.import_components('templates')
         _info('Importing hosts')
         self.import_components('hosts')
-        _info('Importing registration actions')
-        self.__create_actions_file('__autoreg_action_dict')
-        self.__autoreg_action_dict()
-        self.import_reg_actions('reg_actions_import')
-        _info('Importing trigger actions')
-        self.__create_actions_file('__trigger_action_dict')
-        self.import_trig_actions('__trigger_action_dict')
+        _info('Importing actions')
+        self.import_actions()
         _info('Importing media types')
         self.import_media_types('mediatypes')

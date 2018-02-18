@@ -36,9 +36,8 @@ def __log_error_and_fail(message, *args):
 
 class DockerAdmin:
     """
-
+    Instance of a object for managing Docker containers
     """
-
     def __init__(self,
                  zbx_client,
                  data_center,
@@ -48,7 +47,14 @@ class DockerAdmin:
                  delta=None):
         """
 
-        :param service_name:
+        :param zbx_client: instance of a Zabbix API client object
+        :param data_center: The URL of the docker engine we want to connect to
+        :param project: the name of the project of which our container service
+                        is part of
+        :param service_name: service name of the containers to manage
+        :param current_scale: the current number of running containers for the
+                            given service
+        :param delta: how much container resource we want to add or remove
         """
         self.current_scale = current_scale
         self.delta = delta

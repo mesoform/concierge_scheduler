@@ -147,8 +147,8 @@ def initiate_zabbix_client():
         zbx_client = ZabbixAPI(zbx_url).login(user=os.getenv('ZBX_USER'),
                                               password=os.getenv('ZBX_PASS'))
         __info('Connected to Zabbix API Version {}', zbx_client.api_version())
-    except ZabbixAPIException:
-        raise ZabbixAPIException
+    except ZabbixAPIException as err:
+        print(err)
     return zbx_client
 
 
