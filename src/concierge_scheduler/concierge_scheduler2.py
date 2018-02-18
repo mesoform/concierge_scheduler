@@ -4,7 +4,7 @@ import logging
 import argparse
 from pyzabbix import ZabbixAPI
 from concierge_docker import DockerAdmin
-from concierge_zabbix import ZabbixAdmin, ZabbixAPIException
+from concierge_zabbix import ZabbixAdmin
 
 # DOCKER_URL = "tcp://us-east-1.docker.joyent.com:2376"
 __CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
@@ -110,7 +110,6 @@ def arg_parser():
     return root_parser.parse_args()
 
 
-# logging
 def get_logger(name):
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
@@ -141,18 +140,14 @@ def initiate_zabbix_client():
     create an instance of Zabbix API client
     :return: object
     """
-    try:
-        zbx_url = 'http://{}'.format(os.getenv('ZBX_API_HOST'))
-        __info('Logging in using url={} ...', zbx_url)
-        zbx_client = ZabbixAPI(zbx_url).login(user=os.getenv('ZBX_USER'),
-                                              password=os.getenv('ZBX_PASS'))
-        __info('Connected to Zabbix API Version {}', zbx_client.api_version())
-    except ZabbixAPIException as err:
-        print(err)
+    zbx_url = 'http://{}'.format(os.getenv('ZBX_API_HOST'))
+    __info('Logging in using url={} ...', zbx_url)
+    zbx_client = ZabbixAPI(zbx_url).login(user=os.getenv('ZBX_USER'),
+                                          password=os.getenv('ZBX_PASS'))
+    __info('Connected to Zabbix API Version {}', zbx_client.api_version())
     return zbx_client
 
 
-# main
 if __name__ == '__main__':
     # Capture arguments passed to module
     cmd_args = arg_parser()
