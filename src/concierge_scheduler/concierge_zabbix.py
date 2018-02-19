@@ -293,6 +293,9 @@ class ZabbixAdmin:
         :param component: what media to import
         :return:
         """
+        # ToDo: done because default DB install creates some mediatypes.
+        # We could handle handle the exception and run
+        # self.zbx_client.mediatype.update() instead
         self.zbx_client.mediatype.delete("1", "2", "3")
         import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
