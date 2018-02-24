@@ -265,17 +265,20 @@ class ZabbixAdmin:
         import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
             component_data = f.read()
-            _info('Importing {}...', component)
             self.zbx_client.confimport('json', component_data, _rules)
 
     def __update_actions_dict(self):
-        with open('{}/reg_actions.json'.format(self.data_dir)) as reg_actions:
+        with open('{}/reg_actions.json'.format(
+                self.data_dir), 'r') as reg_actions:
             for reg_action in json.load(reg_actions):
                 self.actions_dict.update(self.__update_ids(reg_action))
-        with open('{}/trigger_actions.json'.format(
-                self.data_dir)) as actions_json:
-            self.actions_dict.update(
-                self.__remove_keys(json.load(actions_json)))
+
+        triggers_file = open('{}/trigger_actions.json'.format(self.data_dir))
+        trigger_actions = json.load(triggers_file)
+        clean_trigger_actions = self.__remove_keys(trigger_actions)
+        triggers_file.close()
+        for trigger_action in clean_trigger_actions:
+            self.actions_dict.update(self.__update_ids(trigger_action))
 
     def import_actions(self):
         """
@@ -304,7 +307,6 @@ class ZabbixAdmin:
         import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
             component_data = f.read()
-            _info('Importing {}...', component)
             mediatypes = json.loads(component_data)
             for mediatype in mediatypes:
                 self.zbx_client.mediatype.create(mediatype)
