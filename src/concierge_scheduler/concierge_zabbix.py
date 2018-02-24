@@ -278,6 +278,7 @@ class ZabbixAdmin:
         clean_trigger_actions = self.__remove_keys(trigger_actions)
         triggers_file.close()
         for trigger_action in clean_trigger_actions:
+            # Todo: add to a list, then loop over list in import_actions()
             self.actions_dict.update(self.__update_ids(trigger_action))
 
     def import_actions(self):
@@ -288,9 +289,14 @@ class ZabbixAdmin:
         self.get_new_ids()
         self.original_ids = json.load(open(self.original_ids_file))
         self.__update_actions_dict()
-        self.zbx_client.action.delete("3")
-        for action in self.actions_dict:
-            self.zbx_client.action.create(action)
+        try:
+            self.zbx_client.action.delete("3")
+        except ZabbixAPIException:
+            # todo: add checking for failures when object doesn't exist
+            # "pyzabbix.ZabbixAPIException: ('Error -32500: Application error.,
+            # No permissions to referred object or it does not exist!', -32500)"
+            pass
+        self.zbx_client.action.create(self.actions_dict)
 
     def import_media_types(self, component):
         """
@@ -309,7 +315,10 @@ class ZabbixAdmin:
             component_data = f.read()
             mediatypes = json.loads(component_data)
             for mediatype in mediatypes:
-                self.zbx_client.mediatype.create(mediatype)
+                try:
+                    self.zbx_client.mediatype.update(mediatype)
+                except ZabbixAPIException:
+                    self.zbx_client.mediatype.create(mediatype)
 
     def get_new_ids(self):
         """
