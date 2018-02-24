@@ -347,14 +347,13 @@ class ZabbixAdmin:
                         'actionid', 'maintenance_mode', 'eval_formula',
                         'operationid'):
                     del reg_action[reg_action_key]
-                else:
-                    raise KeyError
         elif type(reg_action) is list:
             for item in reg_action:
                 if type(item) in (list, dict):
                     self.__update_ids(item)
         else:
             raise TypeError
+        return reg_action
 
     def __update_template_id(self, reg_action):
         for template in self.original_ids["templates"]:
