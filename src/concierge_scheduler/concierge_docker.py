@@ -62,6 +62,11 @@ class DockerAdmin:
         self.project = project
         self.data_center = data_center
         self.zbx_client = zbx_client
+        self.command_mapping = {
+            'scale_up': self.scale_up,
+            'scale_down': self.scale_down,
+            'list': self.list
+        }
         self.key_file = \
             self.create_pem_file('notes', 'key', self.service_name)
         self.cert_file = \
@@ -96,9 +101,8 @@ class DockerAdmin:
         for f in [self.key_file, self.ca_file, self.cert_file]:
             os.remove(os.path.join(DOCKER_CERT_PATH, f))
 
-    @staticmethod
-    def run(action):
-        action()
+    def run(self, action):
+        self.command_mapping[action]()
 
     def scale_service(self, desired_scale):
         subprocess.call(

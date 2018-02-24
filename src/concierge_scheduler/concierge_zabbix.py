@@ -109,10 +109,13 @@ class ZabbixAdmin:
         self.original_ids_file = '{}/{}'.format(self.data_dir,
                                                 _ORIGINAL_IDS_FILE)
         self.actions_dict = {}
+        self.command_mapping = {
+            'backup_config': self.backup_config,
+            'restore_config': self.restore_config
+        }
 
-    @staticmethod
-    def run(action):
-        action()
+    def run(self, action):
+        self.command_mapping[action]()
 
     # backups aka exports
     def __export_json_to_file(self, result, export_filename):
@@ -129,7 +132,7 @@ class ZabbixAdmin:
         if not results:
             _info('No {} found', label_for_logging)
             return
-        _info('results' + results, label_for_logging)
+        print(results)
         return results
 
     def export_action_config(self, event_source_id,
@@ -294,8 +297,9 @@ class ZabbixAdmin:
         :return:
         """
         # ToDo: done because default DB install creates some mediatypes.
-        # We could handle handle the exception and run
-        # self.zbx_client.mediatype.update() instead
+        # We could run self.zbx_client.mediatype.update() instead, then handle
+        # handle the exception and only run create() if it fails
+        # 
         self.zbx_client.mediatype.delete("1", "2", "3")
         import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
