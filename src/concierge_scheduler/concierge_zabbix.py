@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+"""
+@author: Gareth Brown
+@contact: gareth@mesoform.com
+@date: 2017
+"""
 from pyzabbix import ZabbixAPIException
 import json
 import os
@@ -6,6 +12,8 @@ from collections import defaultdict
 import logging
 
 _ORIGINAL_IDS_FILE = 'id_map_backup.json'
+_TRIGGER_ACTIONS_FILE = 'trigger_actions.json'
+_REG_ACTIONS_FILE = 'reg_actions.json'
 _rules = {
     'applications': {
         'createMissing': 'true',
@@ -108,7 +116,7 @@ class ZabbixAdmin:
         self.data_dir = data_dir
         self.original_ids_file = '{}/{}'.format(self.data_dir,
                                                 _ORIGINAL_IDS_FILE)
-        self.actions_dict = {}
+        self.actions = []
         self.command_mapping = {
             'backup_config': self.backup_config,
             'restore_config': self.restore_config
@@ -267,19 +275,17 @@ class ZabbixAdmin:
             component_data = f.read()
             self.zbx_client.confimport('json', component_data, _rules)
 
-    def __update_actions_dict(self):
-        with open('{}/reg_actions.json'.format(
-                self.data_dir), 'r') as reg_actions:
-            for reg_action in json.load(reg_actions):
-                self.actions_dict.update(self.__update_ids(reg_action))
+    def _update_actions_list(self):
+        # with open(os.path.join(
+        #         self.data_dir, _REG_ACTIONS_FILE), 'r') as reg_actions:
+        #     for reg_action in json.load(reg_actions):
+        #         self.actions.append(self.__update_ids(reg_action))
 
-        triggers_file = open('{}/trigger_actions.json'.format(self.data_dir))
+        triggers_file = open(os.path.join(self.data_dir, _TRIGGER_ACTIONS_FILE))
         trigger_actions = json.load(triggers_file)
         clean_trigger_actions = self.__remove_keys(trigger_actions)
         triggers_file.close()
-        for trigger_action in clean_trigger_actions:
-            # Todo: add to a list, then loop over list in import_actions()
-            self.actions_dict.update(self.__update_ids(trigger_action))
+        self.actions.append(clean_trigger_actions)
 
     def import_actions(self):
         """
@@ -288,7 +294,7 @@ class ZabbixAdmin:
         """
         self.get_new_ids()
         self.original_ids = json.load(open(self.original_ids_file))
-        self.__update_actions_dict()
+        self._update_actions_list()
         try:
             self.zbx_client.action.delete("3")
         except ZabbixAPIException:
@@ -296,7 +302,7 @@ class ZabbixAdmin:
             # "pyzabbix.ZabbixAPIException: ('Error -32500: Application error.,
             # No permissions to referred object or it does not exist!', -32500)"
             pass
-        self.zbx_client.action.create(self.actions_dict)
+        self.zbx_client.action.create(self.actions)
 
     def import_media_types(self, component):
         """

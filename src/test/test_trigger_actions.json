@@ -1,0 +1,254 @@
+[
+  {
+    "esc_period": "3600",
+    "eventsource": "0",
+    "r_longdata": "Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME} ({HOST.NAME}:{ITEM.KEY}): {ITEM.VALUE}\r\n\r\nOriginal event ID: {EVENT.ID}",
+    "recoveryOperations": [
+      {
+        "evaltype": "0",
+        "operationid": "7",
+        "actionid": "3",
+        "opmessage": {
+          "mediatypeid": "0",
+          "subject": "{TRIGGER.STATUS}: {TRIGGER.NAME}",
+          "message": "Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME1} ({HOST.NAME1}:{ITEM.KEY1}): {ITEM.VALUE1}\r\n2. {ITEM.NAME2} ({HOST.NAME2}:{ITEM.KEY2}): {ITEM.VALUE2}\r\n3. {ITEM.NAME3} ({HOST.NAME3}:{ITEM.KEY3}): {ITEM.VALUE3}\r\n\r\nOriginal event ID: {EVENT.ID}",
+          "default_msg": "1",
+          "operationid": "7"
+        },
+        "opconditions": [],
+        "recovery": "1",
+        "operationtype": "11"
+      }
+    ],
+    "status": "0",
+    "filter": {
+      "evaltype": "0",
+      "eval_formula": "",
+      "conditions": [],
+      "formula": ""
+    },
+    "actionid": "3",
+    "operations": [
+      {
+        "esc_period": "0",
+        "esc_step_to": "1",
+        "recovery": "0",
+        "evaltype": "0",
+        "opmessage_grp": [
+          {
+            "usrgrpid": "7",
+            "operationid": "3"
+          }
+        ],
+        "opmessage_usr": [],
+        "operationid": "3",
+        "actionid": "3",
+        "opmessage": {
+          "mediatypeid": "0",
+          "subject": "{TRIGGER.STATUS}: {TRIGGER.NAME}",
+          "message": "Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME1} ({HOST.NAME1}:{ITEM.KEY1}): {ITEM.VALUE1}\r\n2. {ITEM.NAME2} ({HOST.NAME2}:{ITEM.KEY2}): {ITEM.VALUE2}\r\n3. {ITEM.NAME3} ({HOST.NAME3}:{ITEM.KEY3}): {ITEM.VALUE3}",
+          "default_msg": "1",
+          "operationid": "3"
+        },
+        "operationtype": "0",
+        "esc_step_from": "1",
+        "opconditions": []
+      }
+    ],
+    "def_shortdata": "{TRIGGER.STATUS}: {TRIGGER.NAME}",
+    "r_shortdata": "{TRIGGER.STATUS}: {TRIGGER.NAME}",
+    "maintenance_mode": "1",
+    "name": "Report problems to Zabbix administrators",
+    "def_longdata": "Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\nHost: {HOST.NAME}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME} ({HOST.NAME}:{ITEM.KEY}): {ITEM.VALUE}\r\n\r\nOriginal event ID: {EVENT.ID}"
+  },
+  {
+    "esc_period": "3600",
+    "eventsource": "0",
+    "r_longdata": "Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME1} ({HOST.NAME1}:{ITEM.KEY1}): {ITEM.VALUE1}\r\n2. {ITEM.NAME2} ({HOST.NAME2}:{ITEM.KEY2}): {ITEM.VALUE2}\r\n3. {ITEM.NAME3} ({HOST.NAME3}:{ITEM.KEY3}): {ITEM.VALUE3}\r\n\r\nOriginal event ID: {EVENT.ID}",
+    "recoveryOperations": [],
+    "status": "1",
+    "filter": {
+      "evaltype": "0",
+      "eval_formula": "A",
+      "conditions": [
+        {
+          "formulaid": "A",
+          "value2": "",
+          "value": "",
+          "operator": "7",
+          "conditiontype": "16"
+        }
+      ],
+      "formula": ""
+    },
+    "actionid": "10",
+    "operations": [
+      {
+        "opcommand_hst": [
+          {
+            "hostid": "0",
+            "opcommand_hstid": "1",
+            "operationid": "21"
+          }
+        ],
+        "opcommand_grp": [],
+        "esc_period": "0",
+        "esc_step_to": "1",
+        "recovery": "0",
+        "evaltype": "0",
+        "operationid": "21",
+        "actionid": "10",
+        "operationtype": "1",
+        "esc_step_from": "1",
+        "opconditions": [],
+        "opcommand": {
+          "port": "",
+          "publickey": "",
+          "scriptid": "0",
+          "operationid": "21",
+          "type": "0",
+          "command": "/usr/lib/zabbix/externalscripts/concierge_scheduler/concierge_scheduler scale_up {HOST.HOST} {INVENTORY.DEPLOYMENT.STATUS} 1",
+          "password": "",
+          "authtype": "0",
+          "username": "",
+          "privatekey": "",
+          "execute_on": "1"
+        }
+      }
+    ],
+    "def_shortdata": "{TRIGGER.STATUS}: {TRIGGER.NAME}",
+    "r_shortdata": "{TRIGGER.STATUS}: {TRIGGER.NAME}",
+    "maintenance_mode": "1",
+    "name": "Service scale up due to high load",
+    "def_longdata": "Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME1} ({HOST.NAME1}:{ITEM.KEY1}): {ITEM.VALUE1}\r\n2. {ITEM.NAME2} ({HOST.NAME2}:{ITEM.KEY2}): {ITEM.VALUE2}\r\n3. {ITEM.NAME3} ({HOST.NAME3}:{ITEM.KEY3}): {ITEM.VALUE3}\r\n\r\nOriginal event ID: {EVENT.ID}"
+  },
+  {
+    "esc_period": "3600",
+    "eventsource": "0",
+    "r_longdata": "Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME1} ({HOST.NAME1}:{ITEM.KEY1}): {ITEM.VALUE1}\r\n2. {ITEM.NAME2} ({HOST.NAME2}:{ITEM.KEY2}): {ITEM.VALUE2}\r\n3. {ITEM.NAME3} ({HOST.NAME3}:{ITEM.KEY3}): {ITEM.VALUE3}\r\n\r\nOriginal event ID: {EVENT.ID}",
+    "recoveryOperations": [],
+    "status": "1",
+    "filter": {
+      "evaltype": "0",
+      "eval_formula": "A",
+      "conditions": [
+        {
+          "formulaid": "A",
+          "value2": "",
+          "value": "",
+          "operator": "7",
+          "conditiontype": "16"
+        }
+      ],
+      "formula": ""
+    },
+    "actionid": "11",
+    "operations": [
+      {
+        "opcommand_hst": [
+          {
+            "hostid": "0",
+            "opcommand_hstid": "2",
+            "operationid": "22"
+          }
+        ],
+        "opcommand_grp": [],
+        "esc_period": "0",
+        "esc_step_to": "1",
+        "recovery": "0",
+        "evaltype": "0",
+        "operationid": "22",
+        "actionid": "11",
+        "operationtype": "1",
+        "esc_step_from": "1",
+        "opconditions": [],
+        "opcommand": {
+          "port": "",
+          "publickey": "",
+          "scriptid": "0",
+          "operationid": "22",
+          "type": "0",
+          "command": "/usr/lib/zabbix/externalscripts/concierge_scheduler/concierge_scheduler scale_down {HOST.HOST} {INVENTORY.DEPLOYMENT.STATUS} 1",
+          "password": "",
+          "authtype": "0",
+          "username": "",
+          "privatekey": "",
+          "execute_on": "1"
+        }
+      }
+    ],
+    "def_shortdata": "{TRIGGER.STATUS}: {TRIGGER.NAME}",
+    "r_shortdata": "{TRIGGER.STATUS}: {TRIGGER.NAME}",
+    "maintenance_mode": "1",
+    "name": "Service scale down due to low load",
+    "def_longdata": "Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME1} ({HOST.NAME1}:{ITEM.KEY1}): {ITEM.VALUE1}\r\n2. {ITEM.NAME2} ({HOST.NAME2}:{ITEM.KEY2}): {ITEM.VALUE2}\r\n3. {ITEM.NAME3} ({HOST.NAME3}:{ITEM.KEY3}): {ITEM.VALUE3}\r\n\r\nOriginal event ID: {EVENT.ID}"
+  },
+  {
+    "esc_period": "180",
+    "eventsource": "0",
+    "r_longdata": "Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME1} ({HOST.NAME1}:{ITEM.KEY1}): {ITEM.VALUE1}\r\n2. {ITEM.NAME2} ({HOST.NAME2}:{ITEM.KEY2}): {ITEM.VALUE2}\r\n3. {ITEM.NAME3} ({HOST.NAME3}:{ITEM.KEY3}): {ITEM.VALUE3}\r\n\r\nOriginal event ID: {EVENT.ID}",
+    "recoveryOperations": [],
+    "status": "1",
+    "filter": {
+      "evaltype": "0",
+      "eval_formula": "A and B",
+      "conditions": [
+        {
+          "formulaid": "A",
+          "value2": "",
+          "value": "",
+          "operator": "7",
+          "conditiontype": "16"
+        },
+        {
+          "formulaid": "B",
+          "value2": "",
+          "value": "instances less than minimum requirement",
+          "operator": "2",
+          "conditiontype": "3"
+        }
+      ],
+      "formula": ""
+    },
+    "actionid": "16",
+    "operations": [
+      {
+        "opcommand_hst": [
+          {
+            "hostid": "0",
+            "opcommand_hstid": "3",
+            "operationid": "37"
+          }
+        ],
+        "opcommand_grp": [],
+        "esc_period": "0",
+        "esc_step_to": "0",
+        "recovery": "0",
+        "evaltype": "0",
+        "operationid": "37",
+        "actionid": "16",
+        "operationtype": "1",
+        "esc_step_from": "1",
+        "opconditions": [],
+        "opcommand": {
+          "port": "",
+          "publickey": "",
+          "scriptid": "0",
+          "operationid": "37",
+          "type": "0",
+          "command": "/usr/lib/zabbix/externalscripts/concierge_scheduler/concierge_scheduler scale_up {HOST.HOST} {INVENTORY.DEPLOYMENT.STATUS} 1",
+          "password": "",
+          "authtype": "0",
+          "username": "",
+          "privatekey": "",
+          "execute_on": "1"
+        }
+      }
+    ],
+    "def_shortdata": "{TRIGGER.STATUS}: {TRIGGER.NAME}",
+    "r_shortdata": "{TRIGGER.STATUS}: {TRIGGER.NAME}",
+    "maintenance_mode": "1",
+    "name": "Service scale up due to too few instances running",
+    "def_longdata": "Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME1} ({HOST.NAME1}:{ITEM.KEY1}): {ITEM.VALUE1}\r\n2. {ITEM.NAME2} ({HOST.NAME2}:{ITEM.KEY2}): {ITEM.VALUE2}\r\n3. {ITEM.NAME3} ({HOST.NAME3}:{ITEM.KEY3}): {ITEM.VALUE3}\r\n\r\nOriginal event ID: {EVENT.ID}"
+  }
+]

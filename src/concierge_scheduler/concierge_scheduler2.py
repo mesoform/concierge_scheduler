@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+"""
+@author: Gareth Brown
+@contact: gareth@mesoform.com
+@date: 2017
+"""
 import os
 import sys
 import logging
