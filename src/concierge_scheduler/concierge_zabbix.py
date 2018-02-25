@@ -94,6 +94,10 @@ def _info(message, *args):
     __LOG.log(logging.INFO, message.format(*args))
 
 
+def _warn(message, *args):
+    __LOG.log(logging.WARN, message.format(*args))
+
+
 def _log_error_and_fail(message, *args):
     __LOG.log(logging.ERROR, message.format(*args))
     sys.exit(-1)
@@ -275,17 +279,16 @@ class ZabbixAdmin:
             component_data = f.read()
             self.zbx_client.confimport('json', component_data, _rules)
 
-    def _update_actions_list(self):
-        # with open(os.path.join(
-        #         self.data_dir, _REG_ACTIONS_FILE), 'r') as reg_actions:
-        #     for reg_action in json.load(reg_actions):
-        #         self.actions.append(self.__update_ids(reg_action))
+    def __update_actions_list(self):
+        reg_actions_path = os.path.join(self.data_dir, _REG_ACTIONS_FILE)
+        with open(reg_actions_path, 'r') as reg_actions:
+            for reg_action in json.load(reg_actions):
+                self.actions.append(self.__update_ids(reg_action))
 
-        triggers_file = open(os.path.join(self.data_dir, _TRIGGER_ACTIONS_FILE))
-        trigger_actions = json.load(triggers_file)
-        clean_trigger_actions = self.__remove_keys(trigger_actions)
-        triggers_file.close()
-        self.actions.append(clean_trigger_actions)
+        trig_actions_path = os.path.join(self.data_dir, _TRIGGER_ACTIONS_FILE)
+        with open(trig_actions_path) as trigger_actions:
+            trigger_dict = json.load(trigger_actions)
+            self.actions.append(self.__remove_keys(trigger_dict))
 
     def import_actions(self):
         """
@@ -294,15 +297,16 @@ class ZabbixAdmin:
         """
         self.get_new_ids()
         self.original_ids = json.load(open(self.original_ids_file))
-        self._update_actions_list()
+        self.__update_actions_list()
         try:
             self.zbx_client.action.delete("3")
-        except ZabbixAPIException:
+        except ZabbixAPIException as err:
             # todo: add checking for failures when object doesn't exist
             # "pyzabbix.ZabbixAPIException: ('Error -32500: Application error.,
             # No permissions to referred object or it does not exist!', -32500)"
-            pass
-        self.zbx_client.action.create(self.actions)
+            _warn(err)
+        for action in self.actions:
+            self.zbx_client.action.create(action)
 
     def import_media_types(self, component):
         """
