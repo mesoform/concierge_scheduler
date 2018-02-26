@@ -46,11 +46,15 @@ def arg_parser():
             'event', help='commands to control our event management system',
             formatter_class=argparse.RawTextHelpFormatter)
         return e_parser.add_argument(
-            'command', choices=('backup_config', 'restore_config'),
+            'command', choices=('backup_config', 'restore_config',
+                                'get_simple_id_map'),
             help='\nbackup_config:\n'
                  'backup the event managers configuration.\n'
                  'restore_config:\n'
-                 'restore the event managers configuration.')
+                 'restore the event managers configuration.\n'
+                 'get_simple_id_map:\n'
+                 'create a simple JSON file of the IDs to names of hostgroups'
+                 ' and templates')
 
     def add_container_list_parser(parser):
         return parser.add_parser(
@@ -165,7 +169,8 @@ if __name__ == '__main__':
             DockerAdmin(zbx_client, cmd_args.datacenter_url, cmd_args.project,
                         cmd_args.service_name, cmd_args.current_scale,
                         cmd_args.scale_delta).run(cmd_args.command)
-    elif cmd_args.command in ['backup_config', 'restore_config']:
+    elif cmd_args.command in ['backup_config', 'restore_config',
+                              'get_simple_id_map']:
         if cmd_args.event_engine == 'zabbix':
             ZabbixAdmin(zbx_client, __CONFIG_DIR).run(cmd_args.command)
     else:

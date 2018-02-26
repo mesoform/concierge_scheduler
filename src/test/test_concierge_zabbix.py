@@ -27,7 +27,7 @@ class ZabbixAdminImport(TestCase):
             ZabbixAdmin(object, _TEST_DATA_DIR)
 
     def test_actions_list(self):
-        self.zbx_admin.__update_actions_list()
+        self.zbx_admin._update_actions_list()
         with open(os.path.join(
                 _TEST_DATA_DIR,
                 _TEST_EXPECTED_ACTIONS_FILE)) as f:
