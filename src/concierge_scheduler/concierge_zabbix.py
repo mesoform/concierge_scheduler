@@ -382,17 +382,17 @@ class ZabbixAdmin:
         for template in self.original_ids["templates"]:
             if template['templateid'] == reg_action['templateid']:
                 host = template['host']
-                for new_template in self.imported_template_ids:
-                    if host == new_template['host']:
-                        reg_action['templateid'] = new_template['templateid']
+        for new_template in self.imported_template_ids:
+            if host == new_template['host']:
+                reg_action['templateid'] = new_template['templateid']
 
     def __update_group_id(self, reg_action):
         for group in self.original_ids["hostgroups"]:
             if group['groupid'] == reg_action['groupid']:
                 name = group['name']
-                for new_group in self.imported_hostgroup_ids:
-                    if name == new_group['name']:
-                        reg_action['groupid'] = new_group['groupid']
+        for new_group in self.imported_hostgroup_ids:
+            if name == new_group['name']:
+                reg_action['groupid'] = new_group['groupid']
 
     def __remove_keys(self, data):
         if not isinstance(data, (dict, list)):
