@@ -6,75 +6,73 @@ from pyzabbix import ZabbixAPI, ZabbixAPIException
 from collections import defaultdict
 import subprocess
 
-
 __ENV_ZABBIX_API_HOST = 'ZBX_API_HOST'
 __ENV_ZABBIX_USER = 'ZBX_USER'
 __ENV_ZABBIX_PASS = 'ZBX_PASS'
 __ENV_ZABBIX_CONFIG_DIR = 'ZBX_CONFIG_DIR'
 
-action = sys.argv[1] if len(sys.argv) > 1 else 0
-service_name = sys.argv[2] if len(sys.argv) > 2 else 0
-current_scale = int(sys.argv[3]) if len(sys.argv) > 3 else 0
-increment = int(sys.argv[4]) if len(sys.argv) > 4 else 0
-
+ACTION = sys.argv[1] if len(sys.argv) > 1 else 0
+SERVICE_NAME = sys.argv[2] if len(sys.argv) > 2 else 0
+CURRENT_SCALE = int(sys.argv[3]) if len(sys.argv) > 3 else 0
+INCREMENT = int(sys.argv[4]) if len(sys.argv) > 4 else 0
 
 __rules = {
-        'applications': {
-            'createMissing': 'true',
-            'updateExisting': 'true'
-        },
-        'discoveryRules': {
-            'createMissing': 'true',
-            'updateExisting': 'true'
-        },
-        'graphs': {
-            'createMissing': 'true',
-            'updateExisting': 'true'
-        },
-        'groups': {
-            'createMissing': 'true'
-        },
-        'hosts': {
-            'createMissing': 'true',
-            'updateExisting': 'true'
-        },
-        'images': {
-            'createMissing': 'true',
-            'updateExisting': 'true'
-        },
-        'items': {
-            'createMissing': 'true',
-            'updateExisting': 'true'
-        },
-        'maps': {
-            'createMissing': 'true',
-            'updateExisting': 'true'
-        },
-        'screens': {
-            'createMissing': 'true',
-            'updateExisting': 'true'
-        },
-        'templateLinkage': {
-            'createMissing': 'true',
-            'updateExisting': 'true'
-        },
-        'templates': {
-            'createMissing': 'true',
-            'updateExisting': 'true'
-        },
-        'templateScreens': {
-            'createMissing': 'true',
-            'updateExisting': 'true'
-        },
-        'triggers': {
-            'createMissing': 'true',
-            'updateExisting': 'true'
-        },
-        'valueMaps': {
-            'createMissing': 'true',
-            'updateExisting': 'true'
-        }
+    'applications': {
+        'createMissing': 'true',
+        'updateExisting': 'true'
+    },
+    'discoveryRules': {
+        'createMissing': 'true',
+        'updateExisting': 'true'
+    },
+    'graphs': {
+        'createMissing': 'true',
+        'updateExisting': 'true'
+    },
+    'groups': {
+        'createMissing': 'true'
+    },
+    'hosts': {
+        'createMissing': 'true',
+        'updateExisting': 'true'
+    },
+    'images': {
+        'createMissing': 'true',
+        'updateExisting': 'true'
+    },
+    'items': {
+        'createMissing': 'true',
+        'updateExisting': 'true'
+    },
+    'maps': {
+        'createMissing': 'true',
+        'updateExisting': 'true'
+    },
+    'screens': {
+        'createMissing': 'true',
+        'updateExisting': 'true'
+    },
+    'templateLinkage': {
+        'createMissing': 'true',
+        'updateExisting': 'true'
+    },
+    'templates': {
+        'createMissing': 'true',
+        'updateExisting': 'true'
+    },
+    'templateScreens': {
+        'createMissing': 'true',
+        'updateExisting': 'true'
+    },
+    'triggers': {
+        'createMissing': 'true',
+        'updateExisting': 'true'
+    },
+    'valueMaps': {
+        'createMissing': 'true',
+        'updateExisting': 'true'
     }
+}
 
 
 # logging
@@ -115,62 +113,90 @@ def initiate_zabbix_api(zbx_host, zbx_user, zbx_password):
     __info('Logging in using url={} ...', zbx_url)
     __zbx_api = ZabbixAPI(zbx_url)
     __zbx_api.login(user=zbx_user, password=zbx_password)
-    __info('Connected to Zabbix API Version {} as {}', __zbx_api.api_version(), zbx_user)
+    __info('Connected to Zabbix API Version {} as {}', __zbx_api.api_version(),
+           zbx_user)
 
 
 # scheduler
 
 def pre_pem_file():
-    create_pem_file("notes", 'key', service_name)
-    create_pem_file("poc_1_notes", 'ca', service_name)
-    create_pem_file("poc_2_notes", 'cert', service_name)
+    create_pem_file("notes", 'key', SERVICE_NAME)
+    create_pem_file("poc_1_notes", 'ca', SERVICE_NAME)
+    create_pem_file("poc_2_notes", 'cert', SERVICE_NAME)
 
 
 def create_pem_file(inv_property, filename, service_name):
-    pem_file = __zbx_api.host.get(output=["host"], selectInventory=[inv_property], searchInventory={"alias": service_name})
-    __info('Constructing file {}.pem from {} inventory...', filename, service_name)
-    file = open('{}/{}.pem'.format(DOCKER_CERT_PATH, filename), 'w')
-    file.write(pem_file[0]["inventory"][inv_property])
+    attribute = __zbx_api.host.get(output=["host"],
+                                   selectInventory=[inv_property],
+                                   searchInventory={"alias": service_name})
+    __info('Constructing file {}.pem from {} inventory...',
+           filename, service_name)
+    with open('{}/{}.pem'.format(DOCKER_CERT_PATH, filename), 'w') as pem_file:
+        pem_file.write(attribute[0]["inventory"][inv_property])
 
 
 def del_pem_file():
-    filelist = [f for f in os.listdir(DOCKER_CERT_PATH) if f.endswith(".pem")]
-    for f in filelist:
+    file_list = [f for f in os.listdir(DOCKER_CERT_PATH) if f.endswith(".pem")]
+    for f in file_list:
         os.remove(os.path.join(DOCKER_CERT_PATH, f))
 
 
 def scale_service(desired_scale):
     try:
-        subprocess.call("/usr/local/bin/docker-compose --tlsverify --tlscert={}/cert.pem \
-                  --tlscacert={}/ca.pem --tlskey={}/key.pem \
-                  --host={} --file /tmp/docker-compose.yml --project-name dockerlx \
-                  scale {}={}".format(DOCKER_CERT_PATH, DOCKER_CERT_PATH, DOCKER_CERT_PATH, DOCKER_HOST, service_name, desired_scale).split())
+        subprocess.call(
+            "/usr/local/bin/docker-compose "
+            "--tlsverify "
+            "--tlscert={}/cert.pem "
+            "--tlscacert={}/ca.pem "
+            "--tlskey={}/key.pem "
+            "--host={} "
+            "--file /tmp/docker-compose.yml "
+            "--project-name dockerlx "
+            "up -d "
+            "--scale {}={}".format(
+                DOCKER_CERT_PATH,
+                DOCKER_CERT_PATH,
+                DOCKER_CERT_PATH,
+                DOCKER_HOST,
+                SERVICE_NAME,
+                desired_scale).split())
     except subprocess.CalledProcessError as err:
         __log_error_and_fail('docker-compose failed', err)
     else:
-        __info("Scaled {} from {} to {}".format(service_name, current_scale, desired_scale))
+        __info("Scaled {} from {} to {}".format(
+            SERVICE_NAME, CURRENT_SCALE, desired_scale))
 
 
 def scale_up(current_scale, increment):
     pre_pem_file()
-    desired_scale=(current_scale + increment)
+    desired_scale = (current_scale + increment)
     scale_service(desired_scale)
     del_pem_file()
 
 
 def scale_down(current_scale, increment):
     pre_pem_file()
-    desired_scale=(current_scale - increment)
+    desired_scale = (current_scale - increment)
     scale_service(desired_scale)
     del_pem_file()
 
 
-def service_ps(*args):
+def service_ps():
     pre_pem_file()
-    subprocess.call("/usr/local/bin/docker-compose --tlsverify --tlscert={}/cert.pem \
-                      --tlscacert={}/ca.pem --tlskey={}/key.pem \
-                      --host={} --file /tmp/docker-compose.yml --project-name dockerlx \
-                      ps".format(DOCKER_CERT_PATH, DOCKER_CERT_PATH, DOCKER_CERT_PATH, DOCKER_HOST).split())
+    subprocess.call(
+        "/usr/local/bin/docker-compose "
+        "--tlsverify "
+        "--tlscert={}/cert.pem "
+        "--tlscacert={}/ca.pem "
+        "--tlskey={}/key.pem "
+        "--host={} "
+        "--file /tmp/docker-compose.yml "
+        "--project-name dockerlx "
+        "ps".format(
+            DOCKER_CERT_PATH,
+            DOCKER_CERT_PATH,
+            DOCKER_CERT_PATH,
+            DOCKER_HOST).split())
     del_pem_file()
 
 
@@ -186,7 +212,8 @@ def __get_data(component, label_for_logging=None, **kwargs):
     if not label_for_logging:
         label_for_logging = '{}s'.format(component)
     __info('Exporting {}...', label_for_logging)
-    # getattr is like concatenating component onto the object. In this case ZabbixAPI.template
+    # getattr is like concatenating component onto the object.
+    # In this case ZabbixAPI.template
     results = getattr(__zbx_api, component).get(**kwargs)
     if not results:
         __info('No {} found', label_for_logging)
@@ -262,20 +289,21 @@ def export_trigger_actions(export_dir):
 
 
 def export_actions_data(export_dir):
-
     data = defaultdict(list)
 
     for template in __zbx_api.template.get(output="extend"):
-        templates = {"templateid": template['templateid'], "host": template['host']}
+        templates = \
+            {"templateid": template['templateid'], "host": template['host']}
         data['templates'].append(templates)
 
     for hostgroup in __zbx_api.hostgroup.get(output="extend"):
-        hostgroups = {"groupid": hostgroup['groupid'], "name": hostgroup['name']}
+        hostgroups = {"groupid": hostgroup['groupid'],
+                      "name": hostgroup['name']}
         data['hostgroups'].append(hostgroups)
 
     target_path = '{}/actions_data_orig.json'.format(export_dir)
     with open(target_path, "w") as export_file:
-         export_file.write(json.dumps(data))
+        export_file.write(json.dumps(data))
 
 
 def backup_app(export_dir):
@@ -283,22 +311,22 @@ def backup_app(export_dir):
         os.makedirs(export_dir)
 
     for export_fn in [
-                      export_templates,
-                      export_host_groups,
-                      export_hosts,
-                      export_media_types,
-                      export_auto_registration_actions,
-                      export_trigger_actions,
-                      export_actions_data
-                     ]:
+        export_templates,
+        export_host_groups,
+        export_hosts,
+        export_media_types,
+        export_auto_registration_actions,
+        export_trigger_actions,
+        export_actions_data
+    ]:
         export_fn(export_dir)
 
 
 # imports
 
 def __import_objects(component, import_dir):
-    file = '{}/{}.json'.format(import_dir, component)
-    with open(file, 'r') as f:
+    import_file = '{}/{}.json'.format(import_dir, component)
+    with open(import_file, 'r') as f:
         component_data = f.read()
         __info('Importing {}...', component)
         try:
@@ -308,23 +336,19 @@ def __import_objects(component, import_dir):
 
 
 def __import_reg_actions(component, import_dir):
-    file = '{}/{}.json'.format(import_dir, component)
-    with open(file, 'r') as f:
+    import_file = '{}/{}.json'.format(import_dir, component)
+    with open(import_file, 'r') as f:
         component_data = f.read()
         __info('Importing {}...', component)
         actions = json.loads(component_data)
         for action in actions:
             __zbx_api.action.create(action)
-            # try:
-            #   __zbx_api.action.create(actions)
-            # except ZabbixAPIException as err:
-            #   print(err)
 
 
 def __import_trig_actions(component, import_dir):
     __zbx_api.action.delete("3")
-    file = '{}/{}.json'.format(import_dir, component)
-    with open(file, 'r') as f:
+    import_file = '{}/{}.json'.format(import_dir, component)
+    with open(import_file, 'r') as f:
         component_data = f.read()
         __info('Importing {}...', component)
         trig_actions = json.loads(component_data)
@@ -332,10 +356,10 @@ def __import_trig_actions(component, import_dir):
             __zbx_api.action.create(action)
 
 
-def __import_mediatypes(component, import_dir):
+def __import_media_types(component, import_dir):
     __zbx_api.mediatype.delete("1", "2", "3")
-    file = '{}/{}.json'.format(import_dir, component)
-    with open(file, 'r') as f:
+    import_file = '{}/{}.json'.format(import_dir, component)
+    with open(import_file, 'r') as f:
         component_data = f.read()
         __info('Importing {}...', component)
         mediatypes = json.loads(component_data)
@@ -364,7 +388,7 @@ def import_trig_actions(import_dir):
 
 
 def import_mediatypes(import_dir):
-    __import_mediatypes('mediatypes', import_dir)
+    __import_media_types('mediatypes', import_dir)
 
 
 def import_comp(import_dir, components):
@@ -376,11 +400,13 @@ def exp_act_data_dest(export_dir):
     data = defaultdict(list)
 
     for template in __zbx_api.template.get(output="extend"):
-        templates = {"templateid": template['templateid'], "host": template['host']}
+        templates = {"templateid": template['templateid'],
+                     "host": template['host']}
         data['templates'].append(templates)
 
     for hostgroup in __zbx_api.hostgroup.get(output="extend"):
-        hostgroups = {"groupid": hostgroup['groupid'], "name": hostgroup['name']}
+        hostgroups = {"groupid": hostgroup['groupid'],
+                      "name": hostgroup['name']}
         data['hostgroups'].append(hostgroups)
 
     target_path = '{}/actions_data_dest.json'.format(export_dir)
@@ -402,7 +428,8 @@ def get_all(act_line, key, orig, dest):
                             hostorig = tmplorig['host']
                             for tmpldest in dest["templates"]:
                                 if hostorig == tmpldest['host']:
-                                    act_line[actjsonkey] = tmpldest['templateid']
+                                    act_line[actjsonkey] = tmpldest[
+                                        'templateid']
                 elif key == 'groupid':
                     for grporig in orig["hostgroups"]:
                         if grporig['groupid'] == act_line[actjsonkey]:
@@ -412,7 +439,9 @@ def get_all(act_line, key, orig, dest):
                                     act_line[actjsonkey] = grpdest['groupid']
                             break
             elif actjsonkey != key:
-                if actjsonkey in ('actionid', 'maintenance_mode', 'eval_formula', 'operationid'):
+                if actjsonkey in (
+                        'actionid', 'maintenance_mode', 'eval_formula',
+                        'operationid'):
                     del act_line[actjsonkey]
     elif type(act_line) is list:
         for item in act_line:
@@ -448,7 +477,8 @@ def remove_keys(data):
     if isinstance(data, list):
         return [remove_keys(value) for value in data]
     return {key: remove_keys(value) for key, value in data.items()
-            if key not in {'actionid', 'maintenance_mode', 'eval_formula', 'operationid'}}
+            if key not in {'actionid', 'maintenance_mode', 'eval_formula',
+                           'operationid'}}
 
 
 def gen_imp_trig_act_file(files_dir):
@@ -486,16 +516,15 @@ if __name__ == '__main__':
     host = os.getenv(__ENV_ZABBIX_API_HOST)
     user = os.getenv(__ENV_ZABBIX_USER)
     password = os.getenv(__ENV_ZABBIX_PASS)
-    config_dir = os.getenv(__ENV_ZABBIX_CONFIG_DIR) or \
-                        os.path.abspath(__file__)
+    config_dir = os.getenv(__ENV_ZABBIX_CONFIG_DIR) or os.path.abspath(__file__)
 
     initiate_zabbix_api(host, user, password)
 
-    if action in ['scale_up', 'scale_down', 'service_ps']:
-        fn = globals()[action]
-        fn(current_scale, increment)
-    elif action in ['backup_app', 'import_app']:
-        fn = globals()[action]
+    if ACTION in ['scale_up', 'scale_down', 'service_ps']:
+        fn = globals()[ACTION]
+        fn(CURRENT_SCALE, INCREMENT)
+    elif ACTION in ['backup_app', 'import_app']:
+        fn = globals()[ACTION]
         fn(config_dir)
     else:
-        __log_error_and_fail('Unknown action {}', action)
+        __log_error_and_fail('Unknown action {}', ACTION)

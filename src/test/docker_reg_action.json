@@ -1,0 +1,105 @@
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "name": "Docker Containers Registration",
+      "eventsource": "2",
+      "status": "0",
+      "esc_period": "0",
+      "def_shortdata": "Auto registration: {HOST.HOST}",
+      "def_longdata": "Host name: {HOST.HOST}\r\nHost IP: {HOST.IP}\r\nAgent port: {HOST.PORT}",
+      "r_shortdata": "",
+      "r_longdata": "",
+      "filter": {
+        "evaltype": "2",
+        "formula": "",
+        "conditions": [
+          {
+            "conditiontype": "24",
+            "operator": "2",
+            "value": "dockerlx",
+            "value2": "",
+            "formulaid": "A"
+          },
+          {
+            "conditiontype": "22",
+            "operator": "2",
+            "value": "dockerlx",
+            "value2": "",
+            "formulaid": "B"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "operationtype": "0",
+          "esc_period": "0",
+          "esc_step_from": "1",
+          "esc_step_to": "1",
+          "evaltype": "0",
+          "recovery": "0",
+          "opconditions": [],
+          "opmessage": {
+            "operationid": "17",
+            "default_msg": "1",
+            "subject": "Auto registration: {HOST.HOST}",
+            "message": "Host name: {HOST.HOST}\r\nHost IP: {HOST.IP}\r\nAgent port: {HOST.PORT}",
+            "mediatypeid": "0"
+          },
+          "opmessage_grp": [
+            {
+              "operationid": "17",
+              "usrgrpid": "7"
+            }
+          ],
+          "opmessage_usr": []
+        },
+        {
+          "operationtype": "4",
+          "esc_period": "0",
+          "esc_step_from": "1",
+          "esc_step_to": "1",
+          "evaltype": "0",
+          "recovery": "0",
+          "opconditions": [],
+          "opgroup": [
+            {
+              "operationid": "18",
+              "groupid": "12"
+            }
+          ]
+        },
+        {
+          "operationtype": "6",
+          "esc_period": "0",
+          "esc_step_from": "1",
+          "esc_step_to": "1",
+          "evaltype": "0",
+          "recovery": "0",
+          "opconditions": [],
+          "optemplate": [
+            {
+              "operationid": "19",
+              "templateid": "10125"
+            }
+          ]
+        },
+        {
+          "operationtype": "10",
+          "esc_period": "0",
+          "esc_step_from": "1",
+          "esc_step_to": "1",
+          "evaltype": "0",
+          "recovery": "0",
+          "opconditions": [],
+          "opinventory": {
+            "operationid": "20",
+            "inventory_mode": "1"
+          }
+        }
+      ],
+      "recoveryOperations": []
+    }
+  ],
+  "id": 1
+}

@@ -1,0 +1,52 @@
+{
+  "filter": {
+    "conditions": [],
+    "evaltype": "0",
+    "formula": ""
+  },
+  "esc_period": "3600",
+  "recoveryOperations": [
+    {
+      "recovery": "1",
+      "opconditions": [],
+      "evaltype": "0",
+      "opmessage": {
+        "mediatypeid": "0",
+        "default_msg": "1",
+        "subject": "{TRIGGER.STATUS}: {TRIGGER.NAME}",
+        "message": "Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME1} ({HOST.NAME1}:{ITEM.KEY1}): {ITEM.VALUE1}\r\n2. {ITEM.NAME2} ({HOST.NAME2}:{ITEM.KEY2}): {ITEM.VALUE2}\r\n3. {ITEM.NAME3} ({HOST.NAME3}:{ITEM.KEY3}): {ITEM.VALUE3}\r\n\r\nOriginal event ID: {EVENT.ID}"
+      },
+      "operationtype": "11"
+    }
+  ],
+  "def_shortdata": "{TRIGGER.STATUS}: {TRIGGER.NAME}",
+  "eventsource": "0",
+  "status": "1",
+  "operations": [
+    {
+      "esc_step_to": "1",
+      "opmessage_grp": [
+        {
+          "usrgrpid": "7"
+        }
+      ],
+      "evaltype": "0",
+      "opmessage_usr": [],
+      "operationtype": "0",
+      "esc_period": "0",
+      "esc_step_from": "1",
+      "recovery": "0",
+      "opconditions": [],
+      "opmessage": {
+        "mediatypeid": "0",
+        "default_msg": "1",
+        "subject": "{TRIGGER.STATUS}: {TRIGGER.NAME}",
+        "message": "Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME1} ({HOST.NAME1}:{ITEM.KEY1}): {ITEM.VALUE1}\r\n2. {ITEM.NAME2} ({HOST.NAME2}:{ITEM.KEY2}): {ITEM.VALUE2}\r\n3. {ITEM.NAME3} ({HOST.NAME3}:{ITEM.KEY3}): {ITEM.VALUE3}"
+      }
+    }
+  ],
+  "name": "Report problems to Zabbix administrators",
+  "def_longdata": "Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME1} ({HOST.NAME1}:{ITEM.KEY1}): {ITEM.VALUE1}\r\n2. {ITEM.NAME2} ({HOST.NAME2}:{ITEM.KEY2}): {ITEM.VALUE2}\r\n3. {ITEM.NAME3} ({HOST.NAME3}:{ITEM.KEY3}): {ITEM.VALUE3}\r\n\r\nOriginal event ID: {EVENT.ID}",
+  "r_shortdata": "{TRIGGER.STATUS}: {TRIGGER.NAME}",
+  "r_longdata": "Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME1} ({HOST.NAME1}:{ITEM.KEY1}): {ITEM.VALUE1}\r\n2. {ITEM.NAME2} ({HOST.NAME2}:{ITEM.KEY2}): {ITEM.VALUE2}\r\n3. {ITEM.NAME3} ({HOST.NAME3}:{ITEM.KEY3}): {ITEM.VALUE3}\r\n\r\nOriginal event ID: {EVENT.ID}"
+}

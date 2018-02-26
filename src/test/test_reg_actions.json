@@ -1,0 +1,595 @@
+[
+  {
+	"esc_period": "0",
+	"eventsource": "2",
+	"r_longdata": "",
+	"recoveryOperations": [],
+	"status": "0",
+	"filter": {
+	  "evaltype": "0",
+	  "eval_formula": "A",
+	  "conditions": [
+		{
+		  "formulaid": "A",
+		  "value2": "",
+		  "value": "headnode",
+		  "operator": "2",
+		  "conditiontype": "22"
+		}
+	  ],
+	  "formula": ""
+	},
+	"actionid": "17",
+	"operations": [
+	  {
+		"esc_period": "0",
+		"esc_step_to": "1",
+		"recovery": "0",
+		"evaltype": "0",
+		"opmessage_grp": [
+		  {
+			"usrgrpid": "7",
+			"operationid": "38"
+		  }
+		],
+		"opmessage_usr": [],
+		"operationid": "38",
+		"actionid": "17",
+		"opmessage": {
+		  "mediatypeid": "0",
+		  "subject": "Auto registration: {HOST.HOST}",
+		  "message": "Host name: {HOST.HOST}\r\nHost IP: {HOST.IP}\r\nAgent port: {HOST.PORT}",
+		  "default_msg": "1",
+		  "operationid": "38"
+		},
+		"operationtype": "0",
+		"esc_step_from": "1",
+		"opconditions": []
+	  },
+	  {
+		"evaltype": "0",
+		"opconditions": [],
+		"opgroup": [
+		  {
+			"groupid": "8",
+			"operationid": "39"
+		  },
+		  {
+			"groupid": "10",
+			"operationid": "39"
+		  },
+		  {
+			"groupid": "11",
+			"operationid": "39"
+		  }
+		],
+		"operationid": "39",
+		"actionid": "17",
+		"esc_period": "0",
+		"esc_step_from": "1",
+		"recovery": "0",
+		"esc_step_to": "1",
+		"operationtype": "4"
+	  },
+	  {
+		"evaltype": "0",
+		"opconditions": [],
+		"operationid": "40",
+		"actionid": "17",
+		"esc_period": "0",
+		"optemplate": [
+		  {
+			"templateid": "10108",
+			"operationid": "40"
+		  }
+		],
+		"esc_step_from": "1",
+		"recovery": "0",
+		"esc_step_to": "1",
+		"operationtype": "6"
+	  }
+	],
+	"def_shortdata": "Auto registration: {HOST.HOST}",
+	"r_shortdata": "",
+	"maintenance_mode": "1",
+	"name": "Triton Headnode Registration",
+	"def_longdata": "Host name: {HOST.HOST}\r\nHost IP: {HOST.IP}\r\nAgent port: {HOST.PORT}"
+  },
+  {
+	"esc_period": "0",
+	"eventsource": "2",
+	"r_longdata": "",
+	"recoveryOperations": [],
+	"status": "0",
+	"filter": {
+	  "evaltype": "0",
+	  "eval_formula": "A",
+	  "conditions": [
+		{
+		  "formulaid": "A",
+		  "value2": "",
+		  "value": "f4-4d-30-60-50-aa",
+		  "operator": "2",
+		  "conditiontype": "22"
+		}
+	  ],
+	  "formula": ""
+	},
+	"actionid": "18",
+	"operations": [
+	  {
+		"esc_period": "0",
+		"esc_step_to": "1",
+		"recovery": "0",
+		"evaltype": "0",
+		"opmessage_grp": [
+		  {
+			"usrgrpid": "7",
+			"operationid": "41"
+		  }
+		],
+		"opmessage_usr": [],
+		"operationid": "41",
+		"actionid": "18",
+		"opmessage": {
+		  "mediatypeid": "0",
+		  "subject": "Auto registration: {HOST.HOST}",
+		  "message": "Host name: {HOST.HOST}\r\nHost IP: {HOST.IP}\r\nAgent port: {HOST.PORT}",
+		  "default_msg": "1",
+		  "operationid": "41"
+		},
+		"operationtype": "0",
+		"esc_step_from": "1",
+		"opconditions": []
+	  },
+	  {
+		"evaltype": "0",
+		"opconditions": [],
+		"opgroup": [
+		  {
+			"groupid": "8",
+			"operationid": "42"
+		  },
+		  {
+			"groupid": "9",
+			"operationid": "42"
+		  },
+		  {
+			"groupid": "11",
+			"operationid": "42"
+		  }
+		],
+		"operationid": "42",
+		"actionid": "18",
+		"esc_period": "0",
+		"esc_step_from": "1",
+		"recovery": "0",
+		"esc_step_to": "1",
+		"operationtype": "4"
+	  },
+	  {
+		"evaltype": "0",
+		"opconditions": [],
+		"operationid": "43",
+		"actionid": "18",
+		"esc_period": "0",
+		"optemplate": [
+		  {
+			"templateid": "10107",
+			"operationid": "43"
+		  }
+		],
+		"esc_step_from": "1",
+		"recovery": "0",
+		"esc_step_to": "1",
+		"operationtype": "6"
+	  }
+	],
+	"def_shortdata": "Auto registration: {HOST.HOST}",
+	"r_shortdata": "",
+	"maintenance_mode": "1",
+	"name": "Triton Computenode Registration",
+	"def_longdata": "Host name: {HOST.HOST}\r\nHost IP: {HOST.IP}\r\nAgent port: {HOST.PORT}"
+  },
+  {
+	"esc_period": "0",
+	"eventsource": "2",
+	"r_longdata": "",
+	"recoveryOperations": [],
+	"status": "0",
+	"filter": {
+	  "evaltype": "2",
+	  "eval_formula": "A or B",
+	  "conditions": [
+		{
+		  "formulaid": "A",
+		  "value2": "",
+		  "value": "dockerlx",
+		  "operator": "2",
+		  "conditiontype": "24"
+		},
+		{
+		  "formulaid": "B",
+		  "value2": "",
+		  "value": "dockerlx",
+		  "operator": "2",
+		  "conditiontype": "22"
+		}
+	  ],
+	  "formula": ""
+	},
+	"actionid": "19",
+	"operations": [
+	  {
+		"esc_period": "0",
+		"esc_step_to": "1",
+		"recovery": "0",
+		"evaltype": "0",
+		"opmessage_grp": [
+		  {
+			"usrgrpid": "7",
+			"operationid": "44"
+		  }
+		],
+		"opmessage_usr": [],
+		"operationid": "44",
+		"actionid": "19",
+		"opmessage": {
+		  "mediatypeid": "0",
+		  "subject": "Auto registration: {HOST.HOST}",
+		  "message": "Host name: {HOST.HOST}\r\nHost IP: {HOST.IP}\r\nAgent port: {HOST.PORT}",
+		  "default_msg": "1",
+		  "operationid": "44"
+		},
+		"operationtype": "0",
+		"esc_step_from": "1",
+		"opconditions": []
+	  },
+	  {
+		"evaltype": "0",
+		"opconditions": [],
+		"opgroup": [
+		  {
+			"groupid": "12",
+			"operationid": "45"
+		  }
+		],
+		"operationid": "45",
+		"actionid": "19",
+		"esc_period": "0",
+		"esc_step_from": "1",
+		"recovery": "0",
+		"esc_step_to": "1",
+		"operationtype": "4"
+	  },
+	  {
+		"evaltype": "0",
+		"opconditions": [],
+		"operationid": "46",
+		"actionid": "19",
+		"esc_period": "0",
+		"optemplate": [
+		  {
+			"templateid": "10177",
+			"operationid": "46"
+		  }
+		],
+		"esc_step_from": "1",
+		"recovery": "0",
+		"esc_step_to": "1",
+		"operationtype": "6"
+	  },
+	  {
+		"evaltype": "0",
+		"opinventory": {
+		  "inventory_mode": "1",
+		  "operationid": "47"
+		},
+		"opconditions": [],
+		"operationid": "47",
+		"actionid": "19",
+		"esc_period": "0",
+		"esc_step_from": "1",
+		"recovery": "0",
+		"esc_step_to": "1",
+		"operationtype": "10"
+	  }
+	],
+	"def_shortdata": "Auto registration: {HOST.HOST}",
+	"r_shortdata": "",
+	"maintenance_mode": "1",
+	"name": "Docker Containers Registration",
+	"def_longdata": "Host name: {HOST.HOST}\r\nHost IP: {HOST.IP}\r\nAgent port: {HOST.PORT}"
+  },
+  {
+	"esc_period": "0",
+	"eventsource": "2",
+	"r_longdata": "",
+	"recoveryOperations": [],
+	"status": "0",
+	"filter": {
+	  "evaltype": "0",
+	  "eval_formula": "A",
+	  "conditions": [
+		{
+		  "formulaid": "A",
+		  "value2": "",
+		  "value": "jump-server.inst.gaz.GB-Home.cns.gorillass.co.uk",
+		  "operator": "2",
+		  "conditiontype": "22"
+		}
+	  ],
+	  "formula": ""
+	},
+	"actionid": "20",
+	"operations": [
+	  {
+		"evaltype": "0",
+		"opconditions": [],
+		"opgroup": [
+		  {
+			"groupid": "2",
+			"operationid": "48"
+		  }
+		],
+		"operationid": "48",
+		"actionid": "20",
+		"esc_period": "0",
+		"esc_step_from": "1",
+		"recovery": "0",
+		"esc_step_to": "1",
+		"operationtype": "4"
+	  },
+	  {
+		"evaltype": "0",
+		"opconditions": [],
+		"operationid": "49",
+		"actionid": "20",
+		"esc_period": "0",
+		"optemplate": [
+		  {
+			"templateid": "10001",
+			"operationid": "49"
+		  }
+		],
+		"esc_step_from": "1",
+		"recovery": "0",
+		"esc_step_to": "1",
+		"operationtype": "6"
+	  }
+	],
+	"def_shortdata": "Auto registration: {HOST.HOST}",
+	"r_shortdata": "",
+	"maintenance_mode": "1",
+	"name": "jump-server",
+	"def_longdata": "Host name: {HOST.HOST}\r\nHost IP: {HOST.IP}\r\nAgent port: {HOST.PORT}"
+  },
+  {
+	"esc_period": "0",
+	"eventsource": "2",
+	"r_longdata": "",
+	"recoveryOperations": [],
+	"status": "0",
+	"filter": {
+	  "evaltype": "2",
+	  "eval_formula": "A or B",
+	  "conditions": [
+		{
+		  "formulaid": "B",
+		  "value2": "",
+		  "value": "consul.dockerlx",
+		  "operator": "2",
+		  "conditiontype": "22"
+		},
+		{
+		  "formulaid": "A",
+		  "value2": "",
+		  "value": "consul.dockerlx",
+		  "operator": "2",
+		  "conditiontype": "24"
+		}
+	  ],
+	  "formula": ""
+	},
+	"actionid": "21",
+	"operations": [
+	  {
+		"esc_period": "0",
+		"esc_step_to": "1",
+		"recovery": "0",
+		"evaltype": "0",
+		"opmessage_grp": [
+		  {
+			"usrgrpid": "7",
+			"operationid": "50"
+		  }
+		],
+		"opmessage_usr": [],
+		"operationid": "50",
+		"actionid": "21",
+		"opmessage": {
+		  "mediatypeid": "0",
+		  "subject": "Auto registration: {HOST.HOST}",
+		  "message": "Host name: {HOST.HOST}\r\nHost IP: {HOST.IP}\r\nAgent port: {HOST.PORT}",
+		  "default_msg": "1",
+		  "operationid": "50"
+		},
+		"operationtype": "0",
+		"esc_step_from": "1",
+		"opconditions": []
+	  },
+	  {
+		"evaltype": "0",
+		"opconditions": [],
+		"opgroup": [
+		  {
+			"groupid": "12",
+			"operationid": "51"
+		  },
+		  {
+			"groupid": "17",
+			"operationid": "51"
+		  }
+		],
+		"operationid": "51",
+		"actionid": "21",
+		"esc_period": "0",
+		"esc_step_from": "1",
+		"recovery": "0",
+		"esc_step_to": "1",
+		"operationtype": "4"
+	  },
+	  {
+		"evaltype": "0",
+		"opconditions": [],
+		"operationid": "52",
+		"actionid": "21",
+		"esc_period": "0",
+		"optemplate": [
+		  {
+			"templateid": "10280",
+			"operationid": "52"
+		  }
+		],
+		"esc_step_from": "1",
+		"recovery": "0",
+		"esc_step_to": "1",
+		"operationtype": "6"
+	  },
+	  {
+		"evaltype": "0",
+		"opinventory": {
+		  "inventory_mode": "1",
+		  "operationid": "53"
+		},
+		"opconditions": [],
+		"operationid": "53",
+		"actionid": "21",
+		"esc_period": "0",
+		"esc_step_from": "1",
+		"recovery": "0",
+		"esc_step_to": "1",
+		"operationtype": "10"
+	  }
+	],
+	"def_shortdata": "Auto registration: {HOST.HOST}",
+	"r_shortdata": "",
+	"maintenance_mode": "1",
+	"name": "Consul Container Registration",
+	"def_longdata": "Host name: {HOST.HOST}\r\nHost IP: {HOST.IP}\r\nAgent port: {HOST.PORT}"
+  },
+  {
+	"esc_period": "0",
+	"eventsource": "2",
+	"r_longdata": "",
+	"recoveryOperations": [],
+	"status": "0",
+	"filter": {
+	  "evaltype": "2",
+	  "eval_formula": "A or B",
+	  "conditions": [
+		{
+		  "formulaid": "B",
+		  "value2": "",
+		  "value": "zabbix.dockerlx",
+		  "operator": "2",
+		  "conditiontype": "22"
+		},
+		{
+		  "formulaid": "A",
+		  "value2": "",
+		  "value": "zabbix.dockerlx",
+		  "operator": "2",
+		  "conditiontype": "24"
+		}
+	  ],
+	  "formula": ""
+	},
+	"actionid": "22",
+	"operations": [
+	  {
+		"esc_period": "0",
+		"esc_step_to": "1",
+		"recovery": "0",
+		"evaltype": "0",
+		"opmessage_grp": [
+		  {
+			"usrgrpid": "7",
+			"operationid": "54"
+		  }
+		],
+		"opmessage_usr": [],
+		"operationid": "54",
+		"actionid": "22",
+		"opmessage": {
+		  "mediatypeid": "0",
+		  "subject": "Auto registration: {HOST.HOST}",
+		  "message": "Host name: {HOST.HOST}\r\nHost IP: {HOST.IP}\r\nAgent port: {HOST.PORT}",
+		  "default_msg": "1",
+		  "operationid": "54"
+		},
+		"operationtype": "0",
+		"esc_step_from": "1",
+		"opconditions": []
+	  },
+	  {
+		"evaltype": "0",
+		"opconditions": [],
+		"opgroup": [
+		  {
+			"groupid": "12",
+			"operationid": "55"
+		  },
+		  {
+			"groupid": "23",
+			"operationid": "55"
+		  }
+		],
+		"operationid": "55",
+		"actionid": "22",
+		"esc_period": "0",
+		"esc_step_from": "1",
+		"recovery": "0",
+		"esc_step_to": "1",
+		"operationtype": "4"
+	  },
+	  {
+		"evaltype": "0",
+		"opconditions": [],
+		"operationid": "56",
+		"actionid": "22",
+		"esc_period": "0",
+		"optemplate": [
+		  {
+			"templateid": "10047",
+			"operationid": "56"
+		  }
+		],
+		"esc_step_from": "1",
+		"recovery": "0",
+		"esc_step_to": "1",
+		"operationtype": "6"
+	  },
+	  {
+		"evaltype": "0",
+		"opinventory": {
+		  "inventory_mode": "1",
+		  "operationid": "57"
+		},
+		"opconditions": [],
+		"operationid": "57",
+		"actionid": "22",
+		"esc_period": "0",
+		"esc_step_from": "1",
+		"recovery": "0",
+		"esc_step_to": "1",
+		"operationtype": "10"
+	  }
+	],
+	"def_shortdata": "Auto registration: {HOST.HOST}",
+	"r_shortdata": "",
+	"maintenance_mode": "1",
+	"name": "Zabbix-Server Container Registration",
+	"def_longdata": "Host name: {HOST.HOST}\r\nHost IP: {HOST.IP}\r\nAgent port: {HOST.PORT}"
+  }
+]
