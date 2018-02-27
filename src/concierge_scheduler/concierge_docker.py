@@ -31,11 +31,11 @@ def get_logger(name):
 __LOG = get_logger(__name__)
 
 
-def __info(message, *args):
+def _info(message, *args):
     __LOG.log(logging.INFO, message.format(*args))
 
 
-def __log_error_and_fail(message, *args):
+def _log_error_and_fail(message, *args):
     __LOG.log(logging.ERROR, message.format(*args))
     sys.exit(-1)
 
@@ -44,6 +44,7 @@ class DockerAdmin:
     """
     Instance of a object for managing Docker containers
     """
+
     def __init__(self,
                  zbx_client,
                  data_center,
@@ -74,11 +75,11 @@ class DockerAdmin:
             'list': self.list
         }
         self.key_file = \
-            self.create_pem_file('notes', 'key', self.service_name)
+            self.create_pem_file('notes', 'key')
         self.cert_file = \
-            self.create_pem_file('poc_1_notes', 'cert', self.service_name)
+            self.create_pem_file('poc_1_notes', 'cert')
         self.ca_file = \
-            self.create_pem_file('poc_1_notes', 'ca', self.service_name)
+            self.create_pem_file('poc_1_notes', 'ca')
         self.service_cmd_template = \
             '/usr/local/bin/docker-compose ' \
             '--tlsverify ' \
@@ -93,11 +94,11 @@ class DockerAdmin:
                                         self.data_center,
                                         self.project)
 
-    def create_pem_file(self, inv_property, filename, service_name):
+    def create_pem_file(self, inv_property, filename):
         attribute = self.zbx_client.host.get(output=["host"],
                                              selectInventory=[inv_property],
                                              searchInventory={
-                                                 "alias": service_name})
+                                                 "alias": self.service_name})
         with open('{}/{}.pem'.format(DOCKER_CERT_PATH, filename),
                   'w') as pem_file:
             pem_file.write(attribute[0]["inventory"][inv_property])
@@ -111,10 +112,16 @@ class DockerAdmin:
         self.command_mapping[action]()
 
     def scale_service(self, desired_scale):
-        subprocess.call(
-            str(self.service_cmd_template + 'up -d --scale {}={}'.format(
-                self.service_name,
-                desired_scale)))
+        try:
+            subprocess.call(
+                str(self.service_cmd_template + 'up -d --scale {}={}'.format(
+                    self.service_name,
+                    desired_scale)))
+        except subprocess.CalledProcessError as err:
+            _log_error_and_fail('docker-compose failed', err)
+        else:
+            _info("Scaled {} from {} to {}".format(
+                self.service_name, self.current_scale, self.delta))
         self.del_pem_files()
 
     def scale_up(self):
