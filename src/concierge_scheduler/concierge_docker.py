@@ -77,9 +77,9 @@ class DockerAdmin:
         self.key_file = \
             self.create_pem_file('notes', 'key')
         self.cert_file = \
-            self.create_pem_file('poc_1_notes', 'cert')
-        self.ca_file = \
             self.create_pem_file('poc_1_notes', 'ca')
+        self.ca_file = \
+            self.create_pem_file('poc_2_notes', 'cert')
         self.service_cmd_template = \
             '/usr/local/bin/docker-compose ' \
             '--tlsverify ' \
