@@ -86,7 +86,7 @@ class DockerAdmin:
             '--tlscacert={} ' \
             '--tlskey={} ' \
             '--host={} ' \
-            '--file /tmp/docker-compose.yml ' \
+            '--file /etc/docker/docker-compose-full-stack.yml ' \
             '--project-name {} '.format(self.cert_file,
                                         self.key_file,
                                         self.ca_file,
