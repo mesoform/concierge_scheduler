@@ -17,13 +17,19 @@ __CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
 zbx_client = object
 zbx_admin = object
 
+container_administrators = {
+    'docker': DockerAdmin
+}
+event_administrators = {
+    'zabbix': ZabbixAdmin
+}
+
 
 def arg_parser():
     """
     parses arguments passed on command line when running program
     :return: list of arguments
     """
-
     def add_container_parser(parser):
         # capture arguments for managing containers
         c_parser = parser.add_parser(
@@ -39,7 +45,8 @@ def arg_parser():
             help='(required) project namespace of services to be managed',
             required=True)
         return c_parser.add_subparsers(
-            description='action we want to perform')
+            description='action we want to perform',
+            dest='command')
 
     def add_event_parser(parser):
         e_parser = parser.add_parser(
@@ -57,8 +64,12 @@ def arg_parser():
                  ' and templates')
 
     def add_container_list_parser(parser):
-        return parser.add_parser(
+        ls_parser = parser.add_parser(
             'list', help='show the IDs of all container in a given project')
+        ls_parser.add_argument(
+            '-n', '--service-name',
+            help='(required) name of the service we want to scale',
+            default=None)
 
     def add_container_scale_parser(parser):
         cs_parser = parser.add_parser(
@@ -83,10 +94,12 @@ def arg_parser():
 
     def add_container_scale_command_parser(parser):
         up_parser = parser.add_parser(
-            'up', help='horizontally scale service by adding containers.')
+            'scale_up', aliases=['up'],
+            help='horizontally scale service by adding containers.')
         up_parser.set_defaults(command='scale_up')
         down_parser = parser.add_parser(
-            'down', help='horizontally scale service by removing containers.')
+            'scale_down', aliases=['down'],
+            help='horizontally scale service by removing containers.')
         down_parser.set_defaults(command='scale_down')
         mem_parser = parser.add_parser(
             'memory', help='vertically scale the amount of memory for our '
@@ -161,17 +174,21 @@ def initiate_zabbix_client():
 if __name__ == '__main__':
     # Capture arguments passed to module
     cmd_args = arg_parser()
+    container_admin = container_administrators[cmd_args.container_engine]
     if cmd_args.event_engine == 'zabbix':
         zbx_client = initiate_zabbix_client()
+    event_admin = event_administrators[cmd_args.event_engine]
 
-    if cmd_args.command in ['scale_up', 'scale_down', 'list']:
-        if cmd_args.container_engine == 'docker':
-            DockerAdmin(zbx_client, cmd_args.datacenter_url, cmd_args.project,
+    if cmd_args.command in ['scale_up', 'scale_down']:
+        container_admin(zbx_client, cmd_args.datacenter_url, cmd_args.project,
                         cmd_args.service_name, cmd_args.current_scale,
                         cmd_args.scale_delta).run(cmd_args.command)
+    elif cmd_args.command in ['list']:
+        container_admin(zbx_client, cmd_args.datacenter_url,
+                        cmd_args.service_name,
+                        cmd_args.project).run(cmd_args.command)
     elif cmd_args.command in ['backup_config', 'restore_config',
                               'get_simple_id_map']:
-        if cmd_args.event_engine == 'zabbix':
-            ZabbixAdmin(zbx_client, __CONFIG_DIR).run(cmd_args.command)
+        event_admin(zbx_client, __CONFIG_DIR).run(cmd_args.command)
     else:
         __log_error_and_fail('Unknown action {}', cmd_args.command)
