@@ -103,11 +103,14 @@ class DockerAdmin:
         desired_scale = (self.current_scale - self.delta)
         self.scale_service(desired_scale)
 
-    def list(self):
+    def instance_count(self):
         """
-        provide a list of containers running in a given project
+        provide a count of containers running in a given service
         :return: list
         """
-        container_list = subprocess.call(
-            str(self.service_cmd_template + 'ps -q').split())
-        return container_list
+        container_list = []
+        [container_list.append(container) for container in
+         str(subprocess.call(
+            str(self.service_cmd_template +
+                'ps -q {} > /dev/null').format(self.service_name).split()))]
+        print (len(container_list))
