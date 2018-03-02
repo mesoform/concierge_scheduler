@@ -185,8 +185,8 @@ if __name__ == '__main__':
                         cmd_args.scale_delta).run(cmd_args.command)
     elif cmd_args.command in ['list']:
         container_admin(zbx_client, cmd_args.datacenter_url,
-                        cmd_args.service_name,
-                        cmd_args.project).run(cmd_args.command)
+                        cmd_args.project,
+                        cmd_args.service_name).run(cmd_args.command)
     elif cmd_args.command in ['backup_config', 'restore_config',
                               'get_simple_id_map']:
         event_admin(zbx_client, __CONFIG_DIR).run(cmd_args.command)
