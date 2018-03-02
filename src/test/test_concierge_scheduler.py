@@ -4,7 +4,7 @@
 @date: 2017
 """
 from unittest import TestLoader, TestCase, TextTestRunner
-from concierge_scheduler.concierge_scheduler2 import arg_parser
+from concierge_scheduler.concierge_scheduler import arg_parser
 
 
 class ConciergeSchedulerArgs(TestCase):
