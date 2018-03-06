@@ -77,7 +77,7 @@ class DockerAdmin:
         self.service_cmd_template = \
             '/usr/local/bin/docker-compose ' \
             '--host={} ' \
-            '--file /etc/docker/{}/docker-compose-full-stack.yml '.format(
+            '--file /etc/docker/{}/compose.yml '.format(
                 self.data_center, self.project)
 
     def run(self, action):
