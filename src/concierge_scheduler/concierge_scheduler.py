@@ -1,81 +1,137 @@
+#!/usr/bin/env python
+"""
+@author: Gareth Brown
+@contact: gareth@mesoform.com
+@date: 2017
+"""
 import os
 import sys
 import logging
-import json
-from pyzabbix import ZabbixAPI, ZabbixAPIException
-from collections import defaultdict
-import subprocess
+import argparse
+from pyzabbix import ZabbixAPI
+from concierge_docker import DockerAdmin
+from concierge_zabbix import ZabbixAdmin
 
-__ENV_ZABBIX_API_HOST = 'ZBX_API_HOST'
-__ENV_ZABBIX_USER = 'ZBX_USER'
-__ENV_ZABBIX_PASS = 'ZBX_PASS'
-__ENV_ZABBIX_CONFIG_DIR = 'ZBX_CONFIG_DIR'
+# DOCKER_URL = "tcp://us-east-1.docker.joyent.com:2376"
+__CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
+zbx_client = object
+zbx_admin = object
 
-ACTION = sys.argv[1] if len(sys.argv) > 1 else 0
-SERVICE_NAME = sys.argv[2] if len(sys.argv) > 2 else 0
-CURRENT_SCALE = int(sys.argv[3]) if len(sys.argv) > 3 else 0
-INCREMENT = int(sys.argv[4]) if len(sys.argv) > 4 else 0
-
-__rules = {
-    'applications': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
-    },
-    'discoveryRules': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
-    },
-    'graphs': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
-    },
-    'groups': {
-        'createMissing': 'true'
-    },
-    'hosts': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
-    },
-    'images': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
-    },
-    'items': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
-    },
-    'maps': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
-    },
-    'screens': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
-    },
-    'templateLinkage': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
-    },
-    'templates': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
-    },
-    'templateScreens': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
-    },
-    'triggers': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
-    },
-    'valueMaps': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
-    }
+container_administrators = {
+    'docker': DockerAdmin
+}
+event_administrators = {
+    'zabbix': ZabbixAdmin
 }
 
 
-# logging
+def arg_parser():
+    """
+    parses arguments passed on command line when running program
+    :return: list of arguments
+    """
+    def add_container_parser(parser):
+        # capture arguments for managing containers
+        c_parser = parser.add_parser(
+            'container',
+            help='commands to control our container management system')
+        c_parser.add_argument(
+            '-u', '--datacenter-url',
+            help='(required) url endpoint of the Docker '
+                 ' API for the services to be managed',
+            required=True)
+        c_parser.add_argument(
+            '-p', '--project',
+            help='(required) project namespace of services to be managed',
+            required=True)
+        return c_parser.add_subparsers(
+            description='action we want to perform',
+            dest='command')
+
+    def add_event_parser(parser):
+        e_parser = parser.add_parser(
+            'event', help='commands to control our event management system',
+            formatter_class=argparse.RawTextHelpFormatter)
+        return e_parser.add_argument(
+            'command', choices=('backup_config', 'restore_config',
+                                'get_simple_id_map'),
+            help='\nbackup_config:\n'
+                 'backup the event managers configuration.\n'
+                 'restore_config:\n'
+                 'restore the event managers configuration.\n'
+                 'get_simple_id_map:\n'
+                 'create a simple JSON file of the IDs to names of hostgroups'
+                 ' and templates')
+
+    def add_container_list_parser(parser):
+        ls_parser = parser.add_parser(
+            'list', help='show the IDs of all container in a given project')
+        ls_parser.add_argument(
+            '-n', '--service-name',
+            help='(required) name of the service we want to scale',
+            default=None)
+
+    def add_container_scale_parser(parser):
+        cs_parser = parser.add_parser(
+            'scale', help='scale up or down our service')
+        cs_parser.add_argument(
+            '-n', '--service-name',
+            help='(required) name of the service we want to scale',
+            required=True)
+        cs_parser.add_argument(
+            '-c', '--current-scale', type=int, default=None,
+            help='(required) the number of containers currently running in the'
+                 ' environment',
+            required=True)
+        cs_parser.add_argument(
+            '-s', '--scale-delta', type=int, default=None,
+            help='(required) the number of containers we want to add or remove',
+            required=True)
+        return cs_parser.add_subparsers(
+            help='horizontally scale up or down the number of containers; or'
+                 ' vertically scale the memory of the containers',
+            dest='command')
+
+    def add_container_scale_command_parser(parser):
+        up_parser = parser.add_parser(
+            'scale_up', aliases=['up'],
+            help='horizontally scale service by adding containers.')
+        up_parser.set_defaults(command='scale_up')
+        down_parser = parser.add_parser(
+            'scale_down', aliases=['down'],
+            help='horizontally scale service by removing containers.')
+        down_parser.set_defaults(command='scale_down')
+        mem_parser = parser.add_parser(
+            'memory', help='vertically scale the amount of memory for our '
+                           'service. (EXPERIMENTAL)')
+        mem_parser.set_defaults(command='scale_memory')
+
+    root_parser = argparse.ArgumentParser(
+        description='Script to construct and automate common actions on an'
+                    ' event management system maintaining containers')
+    root_parser.add_argument(
+        '--event-engine',
+        help='event management engine used for managing containers.'
+             ' DEFAULT=zabbix',
+        default='zabbix')
+    root_parser.add_argument(
+        '--container-engine',
+        help='container engine used for managing containers. DEFAULT=docker',
+        default='docker')
+
+    mgmt_parser = \
+        root_parser.add_subparsers(help='management system to control')
+
+    # capture arguments for managing containers
+    container_parser = add_container_parser(mgmt_parser)
+    add_container_list_parser(container_parser)
+    scale_parser = add_container_scale_parser(container_parser)
+    add_container_scale_command_parser(scale_parser)
+    # capture arguments for managing our event manager
+    add_event_parser(mgmt_parser)
+
+    return root_parser.parse_args()
+
 
 def get_logger(name):
     logger = logging.getLogger(name)
@@ -102,429 +158,37 @@ def __log_error_and_fail(message, *args):
     sys.exit(-1)
 
 
-__zbx_api = None
+def initiate_zabbix_client():
+    """
+    create an instance of Zabbix API client
+    :return: object
+    """
+    url = 'http://{}'.format(os.getenv('ZBX_API_HOST'))
+    __info('Logging in using url={} ...', url)
+    client = ZabbixAPI(url)
+    client.login(user=os.getenv('ZBX_USER'), password=os.getenv('ZBX_PASS'))
+    __info('Connected to Zabbix API Version {}', client.api_version())
+    return client
 
-
-# zabbix init
-
-def initiate_zabbix_api(zbx_host, zbx_user, zbx_password):
-    global __zbx_api
-    zbx_url = 'http://{}'.format(zbx_host)
-    __info('Logging in using url={} ...', zbx_url)
-    __zbx_api = ZabbixAPI(zbx_url)
-    __zbx_api.login(user=zbx_user, password=zbx_password)
-    __info('Connected to Zabbix API Version {} as {}', __zbx_api.api_version(),
-           zbx_user)
-
-
-# scheduler
-
-def pre_pem_file():
-    create_pem_file("notes", 'key', SERVICE_NAME)
-    create_pem_file("poc_1_notes", 'ca', SERVICE_NAME)
-    create_pem_file("poc_2_notes", 'cert', SERVICE_NAME)
-
-
-def create_pem_file(inv_property, filename, service_name):
-    attribute = __zbx_api.host.get(output=["host"],
-                                   selectInventory=[inv_property],
-                                   searchInventory={"alias": service_name})
-    __info('Constructing file {}.pem from {} inventory...',
-           filename, service_name)
-    with open('{}/{}.pem'.format(DOCKER_CERT_PATH, filename), 'w') as pem_file:
-        pem_file.write(attribute[0]["inventory"][inv_property])
-
-
-def del_pem_file():
-    file_list = [f for f in os.listdir(DOCKER_CERT_PATH) if f.endswith(".pem")]
-    for f in file_list:
-        os.remove(os.path.join(DOCKER_CERT_PATH, f))
-
-
-def scale_service(desired_scale):
-    try:
-        subprocess.call(
-            "/usr/local/bin/docker-compose "
-            "--tlsverify "
-            "--tlscert={}/cert.pem "
-            "--tlscacert={}/ca.pem "
-            "--tlskey={}/key.pem "
-            "--host={} "
-            "--file /tmp/docker-compose.yml "
-            "--project-name dockerlx "
-            "up -d "
-            "--scale {}={}".format(
-                DOCKER_CERT_PATH,
-                DOCKER_CERT_PATH,
-                DOCKER_CERT_PATH,
-                DOCKER_HOST,
-                SERVICE_NAME,
-                desired_scale).split())
-    except subprocess.CalledProcessError as err:
-        __log_error_and_fail('docker-compose failed', err)
-    else:
-        __info("Scaled {} from {} to {}".format(
-            SERVICE_NAME, CURRENT_SCALE, desired_scale))
-
-
-def scale_up(current_scale, increment):
-    pre_pem_file()
-    desired_scale = (current_scale + increment)
-    scale_service(desired_scale)
-    del_pem_file()
-
-
-def scale_down(current_scale, increment):
-    pre_pem_file()
-    desired_scale = (current_scale - increment)
-    scale_service(desired_scale)
-    del_pem_file()
-
-
-def service_ps():
-    pre_pem_file()
-    subprocess.call(
-        "/usr/local/bin/docker-compose "
-        "--tlsverify "
-        "--tlscert={}/cert.pem "
-        "--tlscacert={}/ca.pem "
-        "--tlskey={}/key.pem "
-        "--host={} "
-        "--file /tmp/docker-compose.yml "
-        "--project-name dockerlx "
-        "ps".format(
-            DOCKER_CERT_PATH,
-            DOCKER_CERT_PATH,
-            DOCKER_CERT_PATH,
-            DOCKER_HOST).split())
-    del_pem_file()
-
-
-# backups aka exports
-
-def __export_json_to_file(result, export_dir, export_filename):
-    target_absolute_path = '{}/{}.json'.format(export_dir, export_filename)
-    with open(target_absolute_path, "w") as export_file:
-        export_file.write(result)
-
-
-def __get_data(component, label_for_logging=None, **kwargs):
-    if not label_for_logging:
-        label_for_logging = '{}s'.format(component)
-    __info('Exporting {}...', label_for_logging)
-    # getattr is like concatenating component onto the object.
-    # In this case ZabbixAPI.template
-    results = getattr(__zbx_api, component).get(**kwargs)
-    if not results:
-        __info('No {} found', label_for_logging)
-        return
-    print(results)
-    return results
-
-
-def __get_selected_data_and_export(component, get_event_source,
-                                   export_dir, export_filename,
-                                   label_for_logging=None):
-    results = __get_data(component, label_for_logging,
-                         output='extend',
-                         selectOperations='extend',
-                         selectRecoveryOperations='extend',
-                         selectFilter='extend',
-                         filter={'eventsource': get_event_source})
-
-    __export_json_to_file(json.dumps(results), export_dir, export_filename)
-
-
-def __get_data_and_export(component, get_output,
-                          export_dir, export_filename, label_for_logging=None):
-    results = __get_data(component, label_for_logging,
-                         output=get_output)
-
-    __export_json_to_file(json.dumps(results), export_dir, export_filename)
-
-
-def __get_data_and_export_config(component, get_id_prop_name,
-                                 export_option_name,
-                                 export_dir, export_filename,
-                                 label_for_logging=None):
-    results = __get_data(component, label_for_logging,
-                         output=get_id_prop_name)
-    print(results)
-    component_ids = [component[get_id_prop_name] for component in results]
-
-    export_options = {export_option_name: component_ids}
-    print(export_options)
-    result = __zbx_api.configuration.export(options=export_options,
-                                            format='json')
-
-    __export_json_to_file(result, export_dir, export_filename)
-
-
-def export_templates(export_dir):
-    __get_data_and_export_config(
-        'template', 'templateid', 'templates', export_dir, 'templates')
-
-
-def export_host_groups(export_dir):
-    __get_data_and_export_config(
-        'hostgroup', 'groupid', 'groups', export_dir, 'hostgroups')
-
-
-def export_hosts(export_dir):
-    __get_data_and_export_config('host', 'hostid', 'hosts', export_dir, 'hosts')
-
-
-def export_media_types(export_dir):
-    __get_data_and_export('mediatype', 'extend', export_dir, 'mediatypes')
-
-
-def export_auto_registration_actions(export_dir):
-    __get_selected_data_and_export(
-        'action', 2, export_dir, 'reg_actions', 'auto-registration actions')
-
-
-def export_trigger_actions(export_dir):
-    __get_selected_data_and_export(
-        'action', 0, export_dir, 'trigger_actions', 'trigger actions')
-
-
-def export_actions_data(export_dir):
-    data = defaultdict(list)
-
-    for template in __zbx_api.template.get(output="extend"):
-        templates = \
-            {"templateid": template['templateid'], "host": template['host']}
-        data['templates'].append(templates)
-
-    for hostgroup in __zbx_api.hostgroup.get(output="extend"):
-        hostgroups = {"groupid": hostgroup['groupid'],
-                      "name": hostgroup['name']}
-        data['hostgroups'].append(hostgroups)
-
-    target_path = '{}/actions_data_orig.json'.format(export_dir)
-    with open(target_path, "w") as export_file:
-        export_file.write(json.dumps(data))
-
-
-def backup_app(export_dir):
-    if not os.path.isdir(export_dir):
-        os.makedirs(export_dir)
-
-    for export_fn in [
-        export_templates,
-        export_host_groups,
-        export_hosts,
-        export_media_types,
-        export_auto_registration_actions,
-        export_trigger_actions,
-        export_actions_data
-    ]:
-        export_fn(export_dir)
-
-
-# imports
-
-def __import_objects(component, import_dir):
-    import_file = '{}/{}.json'.format(import_dir, component)
-    with open(import_file, 'r') as f:
-        component_data = f.read()
-        __info('Importing {}...', component)
-        try:
-            __zbx_api.confimport('json', component_data, __rules)
-        except ZabbixAPIException as err:
-            print(err)
-
-
-def __import_reg_actions(component, import_dir):
-    import_file = '{}/{}.json'.format(import_dir, component)
-    with open(import_file, 'r') as f:
-        component_data = f.read()
-        __info('Importing {}...', component)
-        actions = json.loads(component_data)
-        for action in actions:
-            __zbx_api.action.create(action)
-
-
-def __import_trig_actions(component, import_dir):
-    __zbx_api.action.delete("3")
-    import_file = '{}/{}.json'.format(import_dir, component)
-    with open(import_file, 'r') as f:
-        component_data = f.read()
-        __info('Importing {}...', component)
-        trig_actions = json.loads(component_data)
-        for action in trig_actions:
-            __zbx_api.action.create(action)
-
-
-def __import_media_types(component, import_dir):
-    __zbx_api.mediatype.delete("1", "2", "3")
-    import_file = '{}/{}.json'.format(import_dir, component)
-    with open(import_file, 'r') as f:
-        component_data = f.read()
-        __info('Importing {}...', component)
-        mediatypes = json.loads(component_data)
-        for mediatype in mediatypes:
-            __zbx_api.mediatype.create(mediatype)
-
-
-def import_hostgroups(import_dir):
-    __import_objects('hostgroups', import_dir)
-
-
-def import_templates(import_dir):
-    __import_objects('templates', import_dir)
-
-
-def import_hosts(import_dir):
-    __import_objects('hosts', import_dir)
-
-
-def import_reg_actions(import_dir):
-    __import_reg_actions('reg_actions_import', import_dir)
-
-
-def import_trig_actions(import_dir):
-    __import_trig_actions('trigger_actions_import', import_dir)
-
-
-def import_mediatypes(import_dir):
-    __import_media_types('mediatypes', import_dir)
-
-
-def import_comp(import_dir, components):
-    for import_fn in components:
-        import_fn(import_dir)
-
-
-def exp_act_data_dest(export_dir):
-    data = defaultdict(list)
-
-    for template in __zbx_api.template.get(output="extend"):
-        templates = {"templateid": template['templateid'],
-                     "host": template['host']}
-        data['templates'].append(templates)
-
-    for hostgroup in __zbx_api.hostgroup.get(output="extend"):
-        hostgroups = {"groupid": hostgroup['groupid'],
-                      "name": hostgroup['name']}
-        data['hostgroups'].append(hostgroups)
-
-    target_path = '{}/actions_data_dest.json'.format(export_dir)
-    with open(target_path, "w") as export_file:
-        export_file.write(json.dumps(data))
-
-
-def get_all(act_line, key, orig, dest):
-    if type(act_line) == str:
-        act_line = json.loads(act_line)
-    if type(act_line) is dict:
-        for actjsonkey in act_line.copy():
-            if type(act_line[actjsonkey]) in (list, dict):
-                get_all(act_line[actjsonkey], key, orig, dest)
-            elif actjsonkey == key:
-                if key == 'templateid':
-                    for tmplorig in orig["templates"]:
-                        if tmplorig['templateid'] == act_line[actjsonkey]:
-                            hostorig = tmplorig['host']
-                            for tmpldest in dest["templates"]:
-                                if hostorig == tmpldest['host']:
-                                    act_line[actjsonkey] = tmpldest[
-                                        'templateid']
-                elif key == 'groupid':
-                    for grporig in orig["hostgroups"]:
-                        if grporig['groupid'] == act_line[actjsonkey]:
-                            hostorig = grporig['name']
-                            for grpdest in dest["hostgroups"]:
-                                if hostorig == grpdest['name']:
-                                    act_line[actjsonkey] = grpdest['groupid']
-                            break
-            elif actjsonkey != key:
-                if actjsonkey in (
-                        'actionid', 'maintenance_mode', 'eval_formula',
-                        'operationid'):
-                    del act_line[actjsonkey]
-    elif type(act_line) is list:
-        for item in act_line:
-            if type(item) in (list, dict):
-                get_all(item, key, orig, dest)
-
-
-def gen_imp_reg_act_file(files_dir):
-    actions_file = '{}/reg_actions.json'.format(files_dir)
-    actions_orig = '{}/actions_data_orig.json'.format(files_dir)
-    actions_dest = '{}/actions_data_dest.json'.format(files_dir)
-
-    actions_data = open(actions_file)
-    data_orig = open(actions_orig)
-    data_dest = open(actions_dest)
-    data = json.load(actions_data)
-    orig = json.load(data_orig)
-    dest = json.load(data_dest)
-    for act_line in data:
-        get_all(act_line, 'groupid', orig, dest)
-        get_all(act_line, 'templateid', orig, dest)
-
-    target_path = '{}/reg_actions_import.json'.format(files_dir)
-    with open(target_path, "w") as export_file:
-        export_file.write(json.dumps(data))
-
-    actions_data.close()
-
-
-def remove_keys(data):
-    if not isinstance(data, (dict, list)):
-        return data
-    if isinstance(data, list):
-        return [remove_keys(value) for value in data]
-    return {key: remove_keys(value) for key, value in data.items()
-            if key not in {'actionid', 'maintenance_mode', 'eval_formula',
-                           'operationid'}}
-
-
-def gen_imp_trig_act_file(files_dir):
-    actions_file = '{}/trigger_actions.json'.format(files_dir)
-    actions_json = open(actions_file)
-    trigger_actions = json.load(actions_json)
-    data = remove_keys(trigger_actions)
-
-    target_path = '{}/trigger_actions_import.json'.format(files_dir)
-    with open(target_path, "w") as export_file:
-        export_file.write(json.dumps(data))
-
-    actions_json.close()
-
-
-def import_app(import_dir):
-    to_import = [import_hostgroups, import_templates, import_hosts]
-    import_comp(import_dir, to_import)
-    exp_act_data_dest(import_dir)
-    gen_imp_reg_act_file(import_dir)
-    to_import = [import_reg_actions]
-    import_comp(import_dir, to_import)
-    gen_imp_trig_act_file(import_dir)
-    to_import = [import_trig_actions]
-    import_comp(import_dir, to_import)
-    to_import = [import_mediatypes]
-    import_comp(import_dir, to_import)
-
-
-# main
 
 if __name__ == '__main__':
-    from docker_env import *
+    # Capture arguments passed to module
+    cmd_args = arg_parser()
+    container_admin = container_administrators[cmd_args.container_engine]
+    if cmd_args.event_engine == 'zabbix':
+        zbx_client = initiate_zabbix_client()
+    event_admin = event_administrators[cmd_args.event_engine]
 
-    host = os.getenv(__ENV_ZABBIX_API_HOST)
-    user = os.getenv(__ENV_ZABBIX_USER)
-    password = os.getenv(__ENV_ZABBIX_PASS)
-    config_dir = os.getenv(__ENV_ZABBIX_CONFIG_DIR) or os.path.abspath(__file__)
-
-    initiate_zabbix_api(host, user, password)
-
-    if ACTION in ['scale_up', 'scale_down', 'service_ps']:
-        fn = globals()[ACTION]
-        fn(CURRENT_SCALE, INCREMENT)
-    elif ACTION in ['backup_app', 'import_app']:
-        fn = globals()[ACTION]
-        fn(config_dir)
+    if cmd_args.command in ['scale_up', 'scale_down']:
+        container_admin(zbx_client, cmd_args.datacenter_url, cmd_args.project,
+                        cmd_args.service_name, cmd_args.current_scale,
+                        cmd_args.scale_delta).run(cmd_args.command)
+    elif cmd_args.command in ['list']:
+        container_admin(zbx_client, cmd_args.datacenter_url,
+                        cmd_args.project,
+                        cmd_args.service_name).run(cmd_args.command)
+    elif cmd_args.command in ['backup_config', 'restore_config',
+                              'get_simple_id_map']:
+        event_admin(zbx_client, __CONFIG_DIR).run(cmd_args.command)
     else:
-        __log_error_and_fail('Unknown action {}', ACTION)
+        __log_error_and_fail('Unknown action {}', cmd_args.command)
