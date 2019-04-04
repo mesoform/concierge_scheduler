@@ -13,7 +13,7 @@ from concierge_docker import DockerAdmin
 from concierge_zabbix import ZabbixAdmin
 
 # DOCKER_URL = "tcp://us-east-1.docker.joyent.com:2376"
-__DEFAULT_CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
+__DEFAULT_CONFIG_DIR = os.getenv('ZABBIX_ETC_DIR') or os.path.abspath(__file__)
 zbx_client = object
 zbx_admin = object
 
