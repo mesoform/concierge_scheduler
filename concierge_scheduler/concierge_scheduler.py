@@ -13,7 +13,7 @@ from concierge_docker import DockerAdmin
 from concierge_zabbix import ZabbixAdmin
 
 # DOCKER_URL = "tcp://us-east-1.docker.joyent.com:2376"
-__CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
+__DEFAULT_CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
 zbx_client = object
 zbx_admin = object
 
@@ -52,6 +52,11 @@ def arg_parser():
         e_parser = parser.add_parser(
             'event', help='commands to control our event management system',
             formatter_class=argparse.RawTextHelpFormatter)
+        e_parser.add_argument(
+            '--config-dir',
+            help='directory containing the configuration for the event management system',
+            default=__DEFAULT_CONFIG_DIR
+        )
         return e_parser.add_argument(
             'command', choices=('backup_config', 'restore_config',
                                 'get_simple_id_map'),
@@ -189,6 +194,6 @@ if __name__ == '__main__':
                         cmd_args.service_name).run(cmd_args.command)
     elif cmd_args.command in ['backup_config', 'restore_config',
                               'get_simple_id_map']:
-        event_admin(zbx_client, __CONFIG_DIR).run(cmd_args.command)
+        event_admin(zbx_client, cmd_args.config_dir).run(cmd_args.command)
     else:
         __log_error_and_fail('Unknown action {}', cmd_args.command)
