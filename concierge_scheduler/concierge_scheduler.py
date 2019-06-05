@@ -14,6 +14,9 @@ from concierge_zabbix import ZabbixAdmin
 
 # DOCKER_URL = "tcp://us-east-1.docker.joyent.com:2376"
 __DEFAULT_CONFIG_DIR = os.getenv('ZABBIX_ETC_DIR') or os.path.abspath(__file__)
+ZABBIX_API_SERVER=os.getenv('ZABBIX_API_SERVER')
+ZABBIX_API_USER=os.getenv('ZABBIX_API_USER')
+ZABBIX_API_PASS=os.getenv('ZABBIX_API_PASS')
 zbx_client = object
 zbx_admin = object
 
@@ -168,10 +171,10 @@ def initiate_zabbix_client():
     create an instance of Zabbix API client
     :return: object
     """
-    url = 'http://{}'.format(os.getenv('ZBX_API_HOST'))
+    url = 'http://{}'.format(ZABBIX_API_SERVER)
     __info('Logging in using url={} ...', url)
     client = ZabbixAPI(url)
-    client.login(user=os.getenv('ZBX_USER'), password=os.getenv('ZBX_PASS'))
+    client.login(user=ZABBIX_API_USER, password=ZABBIX_API_PASS)
     __info('Connected to Zabbix API Version {}', client.api_version())
     return client
 
