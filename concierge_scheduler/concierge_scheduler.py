@@ -14,9 +14,9 @@ from concierge_zabbix import ZabbixAdmin
 
 # DOCKER_URL = "tcp://us-east-1.docker.joyent.com:2376"
 __DEFAULT_CONFIG_DIR = os.getenv('ZABBIX_ETC_DIR') or os.path.abspath(__file__)
-ZABBIX_API_SERVER=os.getenv('ZABBIX_API_SERVER')
-ZABBIX_API_USER=os.getenv('ZABBIX_API_USER')
-ZABBIX_API_PASS=os.getenv('ZABBIX_API_PASS')
+ZABBIX_API_SERVER=os.getenv('ZABBIX_API_SERVER', 'zabbix-web')
+ZABBIX_API_USER=os.getenv('ZABBIX_API_USER', 'Admin')
+ZABBIX_API_PASS=os.getenv('ZABBIX_API_PASS', 'zabbix')
 zbx_client = object
 zbx_admin = object
 
