@@ -10,68 +10,82 @@ import os
 import sys
 from collections import defaultdict
 import logging
+import hashlib
 
 _ORIGINAL_IDS_FILE = 'id_map_backup.json'
 _TRIGGER_ACTIONS_FILE = 'trigger_actions.json'
 _REG_ACTIONS_FILE = 'reg_actions.json'
 _rules = {
     'applications': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
+        'createMissing': True,
+        'deleteMissing': False
     },
     'discoveryRules': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
+        'createMissing': True,
+        'updateExisting': True,
+        'deleteMissing': False
     },
     'graphs': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
+        'createMissing': True,
+        'updateExisting': True,
+        'deleteMissing': False
     },
     'groups': {
-        'createMissing': 'true'
+        'createMissing': True
     },
     'hosts': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
+        'createMissing': True,
+        'updateExisting': True
+    },
+    'httptests': {
+        'createMissing': True,
+        'updateExisting': True,
+        'deleteMissing': False
     },
     'images': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
+        'createMissing': True,
+        'updateExisting': True
     },
     'items': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
+        'createMissing': True,
+        'updateExisting': True,
+        'deleteMissing': False
     },
     'maps': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
+        'createMissing': True,
+        'updateExisting': True
+    },
+    'mediaTypes': {
+        'createMissing': True,
+        'updateExisting': False
     },
     'screens': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
+        'createMissing': True,
+        'updateExisting': True
     },
     'templateLinkage': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
+        'createMissing': True,
+        'deleteMissing': False
     },
     'templates': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
+        'createMissing': True,
+        'updateExisting': True
     },
     'templateScreens': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
+        'createMissing': True,
+        'updateExisting': True,
+        'deleteMissing': False
     },
     'triggers': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
+        'createMissing': True,
+        'updateExisting': True,
+        'deleteMissing': False
     },
     'valueMaps': {
-        'createMissing': 'true',
-        'updateExisting': 'true'
+        'createMissing': True,
+        'updateExisting': True
     }
 }
-
 
 # logging
 def get_logger(name):
@@ -317,20 +331,41 @@ class ZabbixAdmin:
         :param component: what media to import
         :return:
         """
-        # ToDo: done because default DB install creates some mediatypes.
-        # We could run self.zbx_client.mediatype.update() instead, then handle
-        # handle the exception and only run create() if it fails
-        # 
-        self.zbx_client.mediatype.delete("1", "2", "3")
+
         import_file = '{}/{}.json'.format(self.data_dir, component)
+        import_mediatype_dict = {}
         with open(import_file, 'r') as f:
             component_data = f.read()
-            mediatypes = json.loads(component_data)
-            for mediatype in mediatypes:
-                try:
-                    self.zbx_client.mediatype.update(mediatype)
-                except ZabbixAPIException:
-                    self.zbx_client.mediatype.create(mediatype)
+            import_mediatypes = json.loads(component_data)
+            for mediatype in import_mediatypes:
+                name = mediatype["name"]
+                object_hash = hashlib.md5(json.dumps(mediatype, sort_keys=True).encode("utf-8")).hexdigest()
+                import_mediatype_dict[name] = (object_hash, mediatype)
+
+        mediatypes = self.zbx_client.mediatype.get()
+        current_mediatype_dict = {}
+        for mediatype in mediatypes:
+            name = mediatype["name"]
+            object_hash = hashlib.md5(json.dumps(mediatype, sort_keys=True).encode("utf-8")).hexdigest()
+            current_mediatype_dict[name] = (object_hash, mediatype)
+
+        if import_mediatype_dict == current_mediatype_dict:
+            return
+        for name, hash_mediatype in import_mediatype_dict.items():
+            if name in current_mediatype_dict:
+                if hash_mediatype[0] != current_mediatype_dict[name][0]:
+                    try:
+                        self.zbx_client.mediatype.update(hash_mediatype[1])
+                    except ZabbixAPIException:
+                        self.zbx_client.mediatype.delete(current_mediatype_dict[name][1]["mediatypeid"])
+                        self.zbx_client.mediatype.create(hash_mediatype[1])
+
+                del current_mediatype_dict[name]
+            else:
+                self.zbx_client.mediatype.create(hash_mediatype[1])
+
+        for name, hash_mediatype in current_mediatype_dict.items():
+            self.zbx_client.mediatype.delete(hash_mediatype[1]["mediatypeid"])
 
     def get_new_ids(self):
         """
