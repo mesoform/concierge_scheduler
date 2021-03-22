@@ -23,7 +23,7 @@ _rules = {
     'discoveryRules': {
         'createMissing': True,
         'updateExisting': True,
-        'deleteMissing': False
+        'deleteMissing': True
     },
     'graphs': {
         'createMissing': True,
@@ -49,7 +49,7 @@ _rules = {
     'items': {
         'createMissing': True,
         'updateExisting': True,
-        'deleteMissing': False
+        'deleteMissing': True
     },
     'maps': {
         'createMissing': True,
@@ -57,7 +57,7 @@ _rules = {
     },
     'mediaTypes': {
         'createMissing': True,
-        'updateExisting': False
+        'updateExisting': True,
     },
     'screens': {
         'createMissing': True,
@@ -65,7 +65,7 @@ _rules = {
     },
     'templateLinkage': {
         'createMissing': True,
-        'deleteMissing': False
+        'deleteMissing': True
     },
     'templates': {
         'createMissing': True,
@@ -74,18 +74,19 @@ _rules = {
     'templateScreens': {
         'createMissing': True,
         'updateExisting': True,
-        'deleteMissing': False
+        'deleteMissing': True
     },
     'triggers': {
         'createMissing': True,
         'updateExisting': True,
-        'deleteMissing': False
+        'deleteMissing': True
     },
     'valueMaps': {
         'createMissing': True,
         'updateExisting': True
     }
 }
+
 
 # logging
 def get_logger(name):
@@ -130,7 +131,10 @@ class ZabbixAdmin:
         self.zbx_client = zbx_client
         self.imported_template_ids = []
         self.imported_hostgroup_ids = []
+        self.imported_mediatype_ids = []
+        self.imported_host_ids = []
         self.original_ids = {}
+        self.dest_ids = {}
         self.data_dir = data_dir
         self.original_ids_file = '{}/{}'.format(self.data_dir,
                                                 _ORIGINAL_IDS_FILE)
@@ -138,6 +142,19 @@ class ZabbixAdmin:
             'backup_config': self.backup_config,
             'restore_config': self.restore_config,
             'get_simple_id_map': self.get_simple_id_map
+        }
+        self.id_mapping = {
+            'templates': {'api_name': "template", 'id': "templateid", 'name': "host"},
+            'mediatypes': {'api_name': "mediatype", 'id': "mediatypeid", 'name': "name"},
+            'hostgroups': {'api_name': "hostgroup", 'id': "groupid", 'name': "name"},
+            'hosts': {'api_name': "host", 'id': "hostid", 'name': "host"},
+            'services': {'api_name': "service", 'id': "serviceid", 'name': "name"},
+            'proxies': {'api_name': "proxy", 'id': "proxyid", 'name': "host"}
+        }
+        self.keys_to_remove = {
+            'proxies': {'proxyid', 'lastaccess', 'auto_compress'},
+            'trigger_actions': {'actionid', 'maintenance_mode', 'eval_formula', 'operationid'},
+            'reg_actions': {'pause_suppressed', 'esc_period'}
         }
 
     def run(self, action):
@@ -235,21 +252,44 @@ class ZabbixAdmin:
         we need to have a simplified map of component IDs to their names because
         when we're importing things like auto-registration actions, we need to
         know what our old and new IDs are so we can correctly link them upon
-        import
+        import.
+        The hash of the components data (excluding id) is also stored for comparing data.
 
         :return: file
         """
         data = defaultdict(list)
 
         for template in self.zbx_client.template.get(output="extend"):
+            template_data = dict(template)
+            del template_data['templateid']
+            template_hash = hashlib.md5(json.dumps(template_data, sort_keys=True).encode("utf-8")).hexdigest()
             templates = \
-                {"templateid": template['templateid'], "host": template['host']}
+                {"templateid": template['templateid'], "host": template['host'], "hash": template_hash}
             data['templates'].append(templates)
 
         for hostgroup in self.zbx_client.hostgroup.get(output="extend"):
+            hostgroup_data = dict(hostgroup)
+            del hostgroup_data['groupid']
+            hostgroup_hash = hashlib.md5(json.dumps(hostgroup_data, sort_keys=True).encode("utf-8")).hexdigest()
             hostgroups = {"groupid": hostgroup['groupid'],
-                          "name": hostgroup['name']}
+                          "name": hostgroup['name'], "hash": hostgroup_hash}
             data['hostgroups'].append(hostgroups)
+
+        for host in self.zbx_client.host.get(output="extend"):
+            host_data = dict(host)
+            del host_data["hostid"]
+            host_hash = hashlib.md5(json.dumps(host_data, sort_keys=True).encode("utf-8")).hexdigest()
+            hosts = {"hostid": host['hostid'],
+                     "host": host['host'], "hash": host_hash}
+            data['hosts'].append(hosts)
+
+        for mediatype in self.zbx_client.mediatype.get(output="extend"):
+            mediatype_data = dict(mediatype)
+            del mediatype_data['mediatypeid']
+            mediatype_hash = hashlib.md5(json.dumps(mediatype_data, sort_keys=True).encode("utf-8")).hexdigest()
+            mediatypes = {"mediatypeid": mediatype['mediatypeid'],
+                          "name": mediatype['name'], "hash": mediatype_hash}
+            data['mediatypes'].append(mediatypes)
 
         with open(self.original_ids_file, "w") as export_file:
             export_file.write(json.dumps(data))
@@ -268,7 +308,6 @@ class ZabbixAdmin:
                                      'templates')
         self.export_component_config('hostgroup', 'groupid', 'groups',
                                      'hostgroups')
-        self.get_simple_id_map()
         _info('Exporting hosts')
         self.export_component_config('host', 'hostid', 'hosts', 'hosts')
         _info('Exporting registration actions')
@@ -278,10 +317,18 @@ class ZabbixAdmin:
         self.export_action_config(0, 'trigger_actions',
                                   'trigger actions')
         _info('Exporting media types')
-        self.export_media_config('mediatype', 'mediatypes')
+        self.export_component_config('mediatype', 'mediatypeid', 'mediaTypes', 'mediatypes')
+
+        _info('Exporting services')
+        self.export_media_config('service', 'services')
+
+        _info('Exporting proxies')
+        self.export_media_config('proxy', 'proxies')
+
+        self.get_simple_id_map()
 
     # imports
-    def import_components(self, component):
+    def import_configuration(self, component):
         """
         import a JSON file backup of Zabbix components like templates or hosts
 
@@ -291,28 +338,40 @@ class ZabbixAdmin:
         import_file = '{}/{}.json'.format(self.data_dir, component)
         with open(import_file, 'r') as f:
             component_data = f.read()
-            self.zbx_client.confimport('json', component_data, _rules)
+            try:
+                self.zbx_client.confimport('json', component_data, _rules)
+            except ZabbixAPIException:
+                self.compare_ids(component)
+                self.zbx_client.confimport('json', component_data, _rules)
 
     def import_trigger_actions(self):
         trig_actions_path = os.path.join(self.data_dir, _TRIGGER_ACTIONS_FILE)
         with open(trig_actions_path) as trigger_actions:
-            trig_actions_list = self.__remove_keys(json.load(trigger_actions))
+            # trig_actions_list = json.load(trigger_actions)
+            trig_actions_list = self.__remove_keys(json.load(trigger_actions), self.keys_to_remove['trigger_actions'])
             for trigger_action in trig_actions_list:
-                self.zbx_client.action.create(trigger_action)
+                try:
+                    self.zbx_client.action.create(trigger_action)
+                except ZabbixAPIException as err:
+                    self.zbx_client.action.update(trigger_action)
 
     def import_registration_actions(self):
         reg_actions_path = os.path.join(self.data_dir, _REG_ACTIONS_FILE)
         with open(reg_actions_path, 'r') as reg_actions:
             for reg_action in json.load(reg_actions):
-                self.__update_ids(reg_action)
-                self.zbx_client.action.create(reg_action)
+                self.__remove_keys(reg_action, self.keys_to_remove['reg_actions'])
+                try:
+                    self.__update_ids(reg_action)
+                    self.zbx_client.action.create(reg_action)
+                except ZabbixAPIException:
+                    self.zbx_client.action.update(reg_action)
 
     def import_actions(self):
         """
         import auto-registration and trigger actions from backup file
 
         """
-        self.get_new_ids()
+        self.get_new_maps()
         self.original_ids = json.load(open(self.original_ids_file))
         try:
             self.zbx_client.action.delete("3")
@@ -321,53 +380,96 @@ class ZabbixAdmin:
             # "pyzabbix.ZabbixAPIException: ('Error -32500: Application error.,
             # No permissions to referred object or it does not exist!', -32500)"
             _warn(str(err))
+        _info('Importing trigger actions')
         self.import_trigger_actions()
+        _info('Importing registration actions')
         self.import_registration_actions()
 
-    def import_media_types(self, component):
+    def compare_ids(self, component):
         """
-        import backed up media
-
-        :param component: what media to import
-        :return:
+        Compare the ids and hashes of components for imported configuration.
+        Remove any components that are in the destination server but not in the imported configuration
+        :param component: Which component to compare the data of
         """
 
+        component_id = self.id_mapping[component]['id']
+        ids_to_delete = []
+        for item in self.original_ids[component]:
+            import_id = item[component_id]
+            if import_id in self.dest_ids[component]:
+                if item["hash"] != self.dest_ids[component][import_id][1]:
+                    ids_to_delete.append(import_id)
+
+        for del_id in list(ids_to_delete):
+            print("Deleting '{}' ids: {}".format(component, del_id))
+            getattr(self.zbx_client, self.id_mapping[component]['api_name']).delete(del_id)
+
+    def import_components(self, component):
+        """
+        Method for importing components which cannot be configured using a configuration import.
+        If the component exists in destination server it is updated
+        :param component: Component to import
+        """
         import_file = '{}/{}.json'.format(self.data_dir, component)
-        import_mediatype_dict = {}
-        with open(import_file, 'r') as f:
-            component_data = f.read()
-            import_mediatypes = json.loads(component_data)
-            for mediatype in import_mediatypes:
-                name = mediatype["name"]
-                object_hash = hashlib.md5(json.dumps(mediatype, sort_keys=True).encode("utf-8")).hexdigest()
-                import_mediatype_dict[name] = (object_hash, mediatype)
+        component_method = self.id_mapping[component]['api_name']
+        file = open(import_file).read()
+        if json.loads(file):
+            for item in json.loads(file):
+                if component in self.keys_to_remove:
+                    self.__remove_keys(item, self.keys_to_remove[component])
+                try:
+                    getattr(self.zbx_client, component_method).create(item)
+                except ZabbixAPIException:
+                    getattr(self.zbx_client, component_method).update()
 
-        mediatypes = self.zbx_client.mediatype.get()
-        current_mediatype_dict = {}
-        for mediatype in mediatypes:
-            name = mediatype["name"]
-            object_hash = hashlib.md5(json.dumps(mediatype, sort_keys=True).encode("utf-8")).hexdigest()
-            current_mediatype_dict[name] = (object_hash, mediatype)
+    def get_id_maps(self):
+        """
+        Query Zabbix server to get template, hostgroup, host and mediatype objects.
+        These are added to map, with structure {component: {id: (name/host, hash), id: (...), ...}, component: ... }
+        :return: map of components.
+        """
+        data = defaultdict(dict)
+        # data = {'templates': {}, 'hostgroups': {}, 'hosts': {}, 'mediatypes': {} }
+        for template in self.zbx_client.template.get(output="extend"):
+            template_data = dict(template)
+            del template_data['templateid']
+            template_hash = hashlib.md5(json.dumps(template_data, sort_keys=True).encode("utf-8")).hexdigest()
+            templateid = template['templateid']
+            host = template['host']
+            data['templates'][templateid] = (host, template_hash)
+            # self.imported_template_ids.append(data)
 
-        if import_mediatype_dict == current_mediatype_dict:
-            return
-        for name, hash_mediatype in import_mediatype_dict.items():
-            if name in current_mediatype_dict:
-                if hash_mediatype[0] != current_mediatype_dict[name][0]:
-                    try:
-                        self.zbx_client.mediatype.update(hash_mediatype[1])
-                    except ZabbixAPIException:
-                        self.zbx_client.mediatype.delete(current_mediatype_dict[name][1]["mediatypeid"])
-                        self.zbx_client.mediatype.create(hash_mediatype[1])
+        for hostgroup in self.zbx_client.hostgroup.get(output="extend"):
+            hostgroup_data = dict(hostgroup)
+            del hostgroup_data['groupid']
+            hostgroup_hash = hashlib.md5(json.dumps(hostgroup_data, sort_keys=True).encode("utf-8")).hexdigest()
+            groupid = hostgroup['groupid']
+            name = hostgroup['name']
+            data['hostgroups'][groupid] = (name, hostgroup_hash)
+            # self.imported_hostgroup_ids.append(data)
 
-                del current_mediatype_dict[name]
-            else:
-                self.zbx_client.mediatype.create(hash_mediatype[1])
+        for host in self.zbx_client.host.get(output="extend"):
+            host_data = dict(host)
+            del host_data["hostid"]
+            host_hash = hashlib.md5(json.dumps(host_data, sort_keys=True).encode("utf-8")).hexdigest()
+            hostid = host['hostid']
+            name = host['host']
+            data['hosts'][hostid] = (name, host_hash)
+            # self.imported_host_ids.append(data)
 
-        for name, hash_mediatype in current_mediatype_dict.items():
-            self.zbx_client.mediatype.delete(hash_mediatype[1]["mediatypeid"])
+        for mediatype in self.zbx_client.mediatype.get(output="extend"):
+            mediatype_data = dict(mediatype)
+            del mediatype_data['mediatypeid']
+            mediatype_hash = hashlib.md5(json.dumps(mediatype_data, sort_keys=True).encode("utf-8")).hexdigest()
+            mediatypeid = mediatype['mediatypeid']
+            name = mediatype['name']
+            data['medatypes'][mediatypeid] = (name, mediatype_hash)
 
-    def get_new_ids(self):
+        self.dest_ids = data
+        # print(self.dest_ids)
+        self.original_ids = json.load(open(self.original_ids_file))
+
+    def get_new_maps(self):
         """
         Query Zabbix server to get a list of template/group objects and simplify
         it to a basic id:name map.
@@ -429,23 +531,28 @@ class ZabbixAdmin:
             if name == new_group['name']:
                 reg_action['groupid'] = new_group['groupid']
 
-    def __remove_keys(self, data):
+    def __remove_keys(self, data, keys_to_remove):
         if not isinstance(data, (dict, list)):
             return data
         if isinstance(data, list):
-            return [self.__remove_keys(value) for value in data]
-        return {key: self.__remove_keys(value) for key, value in data.items()
-                if key not in {'actionid', 'maintenance_mode', 'eval_formula',
-                               'operationid'}}
+            return [self.__remove_keys(value, keys_to_remove) for value in data]
+        return {key: self.__remove_keys(value, keys_to_remove) for key, value in data.items()
+                if key not in keys_to_remove}
 
     def restore_config(self):
+        _info('Getting current ID\'s')
+        self.get_id_maps()
         _info('Importing hostgroups')
-        self.import_components('hostgroups')
+        self.import_configuration('hostgroups')
+        _info('Importing media types')
+        self.import_configuration('mediatypes')
         _info('Importing templates')
-        self.import_components('templates')
+        self.import_configuration('templates')
         _info('Importing hosts')
-        self.import_components('hosts')
+        self.import_configuration('hosts')
+        _info('Importing services')
+        self.import_components('services')
+        _info('Importing proxies')
+        self.import_components('proxies')
         _info('Importing actions')
         self.import_actions()
-        _info('Importing media types')
-        self.import_media_types('mediatypes')

@@ -12,11 +12,12 @@ from pyzabbix import ZabbixAPI
 from concierge_docker import DockerAdmin
 from concierge_zabbix import ZabbixAdmin
 
-# DOCKER_URL = "tcp://us-east-1.docker.joyent.com:2376"
-__DEFAULT_CONFIG_DIR = os.getenv('ZABBIX_ETC_DIR') or os.path.abspath(__file__)
-ZABBIX_API_SERVER=os.getenv('ZABBIX_API_SERVER', 'zabbix-web')
-ZABBIX_API_USER=os.getenv('ZABBIX_API_USER', 'Admin')
-ZABBIX_API_PASS=os.getenv('ZABBIX_API_PASS', 'zabbix')
+__DEFAULT_CONFIG_DIR = os.getenv('ZABBIX_CONFIG_DIR') or os.path.abspath(__file__)
+ZABBIX_API_SERVER=os.getenv('ZABBIX_API_HOST', 'zabbix-web')
+ZABBIX_API_USER=os.getenv('ZABBIX_USER', 'Admin')
+ZABBIX_API_PASS=os.getenv('ZABBIX_PASS', 'zabbix')
+ZABBIX_API_VERIFY=os.getenv('ZABBIX_SSL', 'true')
+ZABBIX_API_HTTPS=os.getenv('ZABBIX_HTTPS', 'true')
 zbx_client = object
 zbx_admin = object
 
@@ -171,9 +172,14 @@ def initiate_zabbix_client():
     create an instance of Zabbix API client
     :return: object
     """
-    url = 'http://{}'.format(ZABBIX_API_SERVER)
+    if ZABBIX_API_HTTPS == 'true':
+        url = 'https://{}'.format(ZABBIX_API_SERVER)
+    else:
+        url = 'http://{}'.format(ZABBIX_API_SERVER)
     __info('Logging in using url={} ...', url)
     client = ZabbixAPI(url)
+    if ZABBIX_API_VERIFY == 'false':
+        client.session.verify = False
     client.login(user=ZABBIX_API_USER, password=ZABBIX_API_PASS)
     __info('Connected to Zabbix API Version {}', client.api_version())
     return client
