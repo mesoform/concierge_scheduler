@@ -10,11 +10,13 @@ The Concierge acting in the role of concierge_scheduler.sh is taking a request f
 Set the following environment variables in the docker-compose.yml file for the Zabbix server service:
 
 `ZBX_API_HOST`: The Zabbix web frontend endpoint \
-`ZBX_USER`: A Zabbix username to access the web API \
-`ZBX_PASS`: Password for the above Zabbix username \
+`ZBX_API_USER`: A Zabbix username to access the web API \
+`ZBX_API_PASS`: Password for the above Zabbix username \
 `ZBX_CONFIG_DIR`: The source path for the Zabbix backup/export files \
-`ZBX_SSL`: `'true'` to enable ssl verification (default), `'false'` to disable \
-`ZBX_HTTP`:`'true'` to use https (default), `'false'` to use http
+`ZBX_TLS_VERIFY`: `'true'` to enable ssl verification (default), `'false'` to disable \
+`ZBX_FORCE_TEMPLATES`: Will delete all templates in destination zabbix server before importing configuration. 
+Setting to anything other than `'false'` will enable this. Can also use the `--force-templates` flag to 
+
 
 Example:
 ```
@@ -79,6 +81,8 @@ Actions known to the scheduler include the following:
     
     Example: `concierge_scheduler restore_config`
     
+    It also takes the flag: `--force-templates` which will force all templates on destination server to be deleted before importing the template configuration
+
     Logic insight:
         
     Different Zabbix API methods are used to import components.
