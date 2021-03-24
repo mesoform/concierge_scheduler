@@ -12,6 +12,7 @@ _TEST_DATA_DIR = './'
 _TEST_TRIG_ACT_FILE = 'test_trigger_actions.json'
 _TEST_REG_ACT_FILE = 'test_reg_actions.json'
 _TEST_EXPECTED_ACTIONS_FILE = 'test_full_actions_list'
+_TEST_FORCE_TEMPLATE = False
 
 
 class ZabbixAdminImport(TestCase):
@@ -24,7 +25,7 @@ class ZabbixAdminImport(TestCase):
         concierge_scheduler.concierge_zabbix._REG_ACTIONS_FILE = \
             _TEST_REG_ACT_FILE
         self.zbx_admin = concierge_scheduler.concierge_zabbix.\
-            ZabbixAdmin(object, _TEST_DATA_DIR)
+            ZabbixAdmin(object, _TEST_DATA_DIR, _TEST_FORCE_TEMPLATE)
 
     def test_actions_list(self):
         self.zbx_admin._update_actions_list()

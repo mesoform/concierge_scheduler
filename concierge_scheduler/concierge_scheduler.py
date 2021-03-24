@@ -9,8 +9,8 @@ import sys
 import logging
 import argparse
 from pyzabbix import ZabbixAPI
-from concierge_scheduler.concierge_docker import DockerAdmin
-from concierge_scheduler.concierge_zabbix import ZabbixAdmin
+from concierge_docker import DockerAdmin
+from concierge_zabbix import ZabbixAdmin
 
 __DEFAULT_CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
 ZBX_API_HOST = os.getenv('ZBX_API_HOST', 'zabbix-web')

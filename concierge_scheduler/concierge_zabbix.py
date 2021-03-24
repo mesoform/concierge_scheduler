@@ -201,11 +201,11 @@ class ZabbixAdmin:
 
         self.__export_json_to_file(json.dumps(results), export_filename)
 
-    def export_media_config(self, component,
+    def export_component(self, component,
                             export_filename,
                             label_for_logging=None):
         """
-        create a JSON file backup of the Zabbix media configuration
+        create a JSON file backup of the Zabbix component configuration
 
         :param component: what media we want to export. E.g. mediatypes
         :param export_filename: the name to use for the output file
@@ -297,10 +297,10 @@ class ZabbixAdmin:
         self.export_component_config('mediatype', 'mediatypeid', 'mediaTypes', 'mediatypes')
 
         _info('Exporting services')
-        self.export_media_config('service', 'services')
+        self.export_component('service', 'services')
 
         _info('Exporting proxies')
-        self.export_media_config('proxy', 'proxies')
+        self.export_component('proxy', 'proxies')
 
         self.get_id_file()
 
