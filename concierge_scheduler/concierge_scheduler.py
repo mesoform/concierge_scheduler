@@ -201,7 +201,7 @@ if __name__ == '__main__':
                         cmd_args.service_name).run(cmd_args.command)
     elif cmd_args.command in ['backup_config', 'restore_config',
                               'get_simple_id_map']:
-        force_templates = False if ZBX_FORCE_TEMPLATES in ['False', 'false'] else cmd_args.force_templates
+        force_templates = False if ZBX_FORCE_TEMPLATES.upper() == "FALSE" else cmd_args.force_templates
         event_admin(zbx_client, cmd_args.config_dir, cmd_args.force_templates).run(cmd_args.command)
 
     else:

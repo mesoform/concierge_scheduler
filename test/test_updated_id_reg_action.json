@@ -1,0 +1,81 @@
+{
+  "esc_period": "0",
+  "eventsource": "2",
+  "r_longdata": "",
+  "recoveryOperations": [],
+  "status": "0",
+  "filter": {
+    "evaltype": "0",
+    "conditions": [
+      {
+        "formulaid": "A",
+        "value2": "",
+        "value": "headnode",
+        "operator": "2",
+        "conditiontype": "22"
+      }
+    ],
+    "formula": ""
+  },
+  "operations": [
+    {
+      "esc_period": "0",
+      "esc_step_to": "1",
+      "recovery": "0",
+      "evaltype": "0",
+      "opmessage_grp": [
+        {
+          "usrgrpid": "7"
+        }
+      ],
+      "opmessage_usr": [],
+      "opmessage": {
+        "mediatypeid": "0",
+        "subject": "Auto registration: {HOST.HOST}",
+        "message": "Host name: {HOST.HOST}\r\nHost IP: {HOST.IP}\r\nAgent port: {HOST.PORT}",
+        "default_msg": "1"
+      },
+      "operationtype": "0",
+      "esc_step_from": "1",
+      "opconditions": []
+    },
+    {
+      "evaltype": "0",
+      "opconditions": [],
+      "opgroup": [
+        {
+          "groupid": "8"
+        },
+        {
+          "groupid": "10"
+        },
+        {
+          "groupid": "11"
+        }
+      ],
+      "esc_period": "0",
+      "esc_step_from": "1",
+      "recovery": "0",
+      "esc_step_to": "1",
+      "operationtype": "4"
+    },
+    {
+      "evaltype": "0",
+      "opconditions": [],
+      "esc_period": "0",
+      "optemplate": [
+        {
+          "templateid": "10000"
+        }
+      ],
+      "esc_step_from": "1",
+      "recovery": "0",
+      "esc_step_to": "1",
+      "operationtype": "6"
+    }
+  ],
+  "def_shortdata": "Auto registration: {HOST.HOST}",
+  "r_shortdata": "",
+  "name": "Triton Headnode Registration",
+  "def_longdata": "Host name: {HOST.HOST}\r\nHost IP: {HOST.IP}\r\nAgent port: {HOST.PORT}"
+}

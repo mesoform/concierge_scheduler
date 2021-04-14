@@ -162,13 +162,13 @@ class ZabbixAdmin:
         self.command_mapping[action]()
 
     # backups aka exports
-    def __export_json_to_file(self, result, export_filename):
+    def _export_json_to_file(self, result, export_filename):
         target_absolute_path = '{}/{}.json'.format(self.data_dir,
                                                    export_filename)
         with open(target_absolute_path, "w") as export_file:
             export_file.write(result)
 
-    def __get_data(self, component, label_for_logging=None, **kwargs):
+    def _get_data(self, component, label_for_logging=None, **kwargs):
         if not label_for_logging:
             label_for_logging = '{}s'.format(component)
         _info('Exporting {}...', label_for_logging)
@@ -192,18 +192,18 @@ class ZabbixAdmin:
         :param label_for_logging: label we'll use when logging
         :return: file
         """
-        results = self.__get_data('action', label_for_logging,
-                                  output='extend',
-                                  selectOperations='extend',
-                                  selectRecoveryOperations='extend',
-                                  selectFilter='extend',
-                                  filter={'eventsource': event_source_id})
+        results = self._get_data('action', label_for_logging,
+                                 output='extend',
+                                 selectOperations='extend',
+                                 selectRecoveryOperations='extend',
+                                 selectFilter='extend',
+                                 filter={'eventsource': event_source_id})
 
-        self.__export_json_to_file(json.dumps(results), export_filename)
+        self._export_json_to_file(json.dumps(results), export_filename)
 
     def export_component(self, component,
-                            export_filename,
-                            label_for_logging=None):
+                         export_filename,
+                         label_for_logging=None):
         """
         create a JSON file backup of the Zabbix component configuration
 
@@ -212,10 +212,10 @@ class ZabbixAdmin:
         :param label_for_logging: label we'll use when logging
         :return: file
         """
-        results = self.__get_data(component, label_for_logging,
+        results = self._get_data(component, label_for_logging,
                                   output='extend')
 
-        self.__export_json_to_file(json.dumps(results), export_filename)
+        self._export_json_to_file(json.dumps(results), export_filename)
 
     def export_component_config(self, component, id_prop_name,
                                 export_option_name,
@@ -236,7 +236,7 @@ class ZabbixAdmin:
         :param label_for_logging: label we'll use when logging
         :return: file
         """
-        results = self.__get_data(component, label_for_logging,
+        results = self._get_data(component, label_for_logging,
                                   output=id_prop_name)
         print(results)
         component_ids = [component[id_prop_name] for component in results]
@@ -246,7 +246,7 @@ class ZabbixAdmin:
         result = self.zbx_client.configuration.export(options=export_options,
                                                       format='json')
 
-        self.__export_json_to_file(result, export_filename)
+        self._export_json_to_file(result, export_filename)
 
     def get_id_file(self):
         """
@@ -266,8 +266,8 @@ class ZabbixAdmin:
                 item_copy = dict(item)
                 del item_copy[component_id]
                 item_hash = hashlib.md5(json.dumps(item_copy, sort_keys=True).encode("utf-8")).hexdigest()
-                item_map = {component_name: item[component_name], 'hash': item_hash, component_id: item[component_id]}
-                data[component].append(item_map)
+                data[component].append(
+                    {component_name: item[component_name], 'hash': item_hash, component_id: item[component_id]})
         with open(self.original_ids_file, "w") as export_file:
             export_file.write(json.dumps(data))
 
@@ -330,7 +330,7 @@ class ZabbixAdmin:
         trig_actions_path = os.path.join(self.data_dir, _TRIGGER_ACTIONS_FILE)
         with open(trig_actions_path) as trigger_actions:
             # trig_actions_list = json.load(trigger_actions)
-            trig_actions_list = self.__remove_keys(json.load(trigger_actions), self.keys_to_remove['trigger_actions'])
+            trig_actions_list = self._remove_keys(json.load(trigger_actions), self.keys_to_remove['trigger_actions'])
             for trigger_action in trig_actions_list:
                 try:
                     self.zbx_client.action.create(trigger_action)
@@ -341,9 +341,9 @@ class ZabbixAdmin:
         reg_actions_path = os.path.join(self.data_dir, _REG_ACTIONS_FILE)
         with open(reg_actions_path, 'r') as reg_actions:
             for reg_action in json.load(reg_actions):
-                self.__remove_keys(reg_action, self.keys_to_remove['reg_actions'])
+                self._remove_keys(reg_action, self.keys_to_remove['reg_actions'])
                 try:
-                    self.__update_ids(reg_action)
+                    self._update_ids(reg_action)
                     self.zbx_client.action.create(reg_action)
                 except ZabbixAPIException:
                     self.zbx_client.action.update(reg_action)
@@ -378,9 +378,8 @@ class ZabbixAdmin:
         ids_to_delete = []
         for item in self.original_ids[component]:
             import_id = item[component_id]
-            if import_id in self.dest_ids[component]:
-                if item["hash"] != self.dest_ids[component][import_id]['hash']:
-                    ids_to_delete.append(import_id)
+            if import_id in self.dest_ids[component] and item["hash"] != self.dest_ids[component][import_id]['hash']:
+                ids_to_delete.append(import_id)
 
         for del_id in list(ids_to_delete):
             print("Deleting '{}' id: {}".format(component, del_id))
@@ -402,7 +401,7 @@ class ZabbixAdmin:
         if os.path.isfile(import_file):
             for item in json.loads(file):
                 if component in self.keys_to_remove:
-                    self.__remove_keys(item, self.keys_to_remove[component])
+                    self._remove_keys(item, self.keys_to_remove[component])
                 try:
                     getattr(self.zbx_client, component_method).create(item)
                 except ZabbixAPIException:
@@ -426,23 +425,7 @@ class ZabbixAdmin:
                                                                 'id': item[component_id]}
         self.original_ids = json.load(open(self.original_ids_file)) if self.original_ids == {} else self.original_ids
 
-    def get_new_maps(self):
-        """
-        Query Zabbix server to get a list of template/group objects and simplify
-        it to a basic id:name map.
-        :return: list
-        """
-        for template_dict in self.zbx_client.template.get(output="extend"):
-            template_map = {"templateid": template_dict['templateid'],
-                            "host": template_dict['host']}
-            self.imported_template_ids.append(template_map)
-
-        for hostgroup_dict in self.zbx_client.hostgroup.get(output="extend"):
-            hostgroup_map = {"groupid": hostgroup_dict['groupid'],
-                             "name": hostgroup_dict['name']}
-            self.imported_hostgroup_ids.append(hostgroup_map)
-
-    def __update_ids(self, reg_action):
+    def _update_ids(self, reg_action):
         """
         take a registration action object and recurse into the data to look for
         IDs which need updating and update them to the new ID of the equivalent
@@ -455,11 +438,11 @@ class ZabbixAdmin:
         if type(reg_action) is dict:
             for reg_action_key in reg_action.copy():
                 if type(reg_action[reg_action_key]) in (list, dict):
-                    self.__update_ids(reg_action[reg_action_key])
+                    self._update_ids(reg_action[reg_action_key])
                 elif reg_action_key == 'templateid':
-                    self.__update_template_id(reg_action)
+                    self._update_template_id(reg_action)
                 elif reg_action_key == 'groupid':
-                    self.__update_group_id(reg_action)
+                    self._update_group_id(reg_action)
                 elif reg_action_key in (
                         'actionid', 'maintenance_mode', 'eval_formula',
                         'operationid'):
@@ -467,20 +450,20 @@ class ZabbixAdmin:
         elif type(reg_action) is list:
             for item in reg_action:
                 if type(item) in (list, dict):
-                    self.__update_ids(item)
+                    self._update_ids(item)
         else:
             raise TypeError
         return reg_action
 
-    def __update_template_id(self, reg_action):
+    def _update_template_id(self, reg_action):
         for template in self.original_ids["templates"]:
             if template['templateid'] == reg_action['templateid']:
                 host = template['host']
-        for new_template in self.dest_ids['template'].items():
-            if host == new_template['name']:
+        for new_template in self.dest_ids['templates']:
+            if 'host' in locals() and host == new_template['host']:
                 reg_action['templateid'] = new_template['templateid']
 
-    def __update_group_id(self, reg_action):
+    def _update_group_id(self, reg_action):
         for group in self.original_ids["hostgroups"]:
             if group['groupid'] == reg_action['groupid']:
                 name = group['name']
@@ -488,12 +471,12 @@ class ZabbixAdmin:
             if name == new_group['name']:
                 reg_action['groupid'] = new_group['groupid']
 
-    def __remove_keys(self, data, keys_to_remove):
+    def _remove_keys(self, data, keys_to_remove):
         if not isinstance(data, (dict, list)):
             return data
         if isinstance(data, list):
-            return [self.__remove_keys(value, keys_to_remove) for value in data]
-        return {key: self.__remove_keys(value, keys_to_remove) for key, value in data.items()
+            return [self._remove_keys(value, keys_to_remove) for value in data]
+        return {key: self._remove_keys(value, keys_to_remove) for key, value in data.items()
                 if key not in keys_to_remove}
 
     def restore_config(self):
