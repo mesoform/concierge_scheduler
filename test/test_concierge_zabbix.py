@@ -4,7 +4,6 @@
 @date: 2017
 """
 import json
-import logging
 import os
 from unittest import TestLoader, TestCase, TextTestRunner
 from ast import literal_eval
@@ -58,9 +57,6 @@ class FullTest(TestCase):
     def test_remove_keys(self):
         data = {'example': 'delete', 'key': 'value', 'example2': 'delete'}
         keys_to_remove = ['example', 'example2']
-        returned_val = self.zbx_admin._remove_keys(data, keys_to_remove)
-        log = logging.getLogger("ZabbixAdminImport.test_remove_keys")
-        log.debug("this = %s", type(returned_val))
         self.assertDictEqual(self.zbx_admin._remove_keys(data, keys_to_remove), {'key': 'value'})
 
     def test_update_ids(self):

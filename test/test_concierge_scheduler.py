@@ -4,7 +4,6 @@
 @date: 2017
 """
 from unittest import TestLoader, TestCase, TextTestRunner
-import logging
 from concierge_scheduler import concierge_scheduler
 from concierge_scheduler.concierge_scheduler import arg_parser
 from mock import patch

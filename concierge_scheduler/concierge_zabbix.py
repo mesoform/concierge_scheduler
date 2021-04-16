@@ -213,7 +213,7 @@ class ZabbixAdmin:
         :return: file
         """
         results = self._get_data(component, label_for_logging,
-                                  output='extend')
+                                 output='extend')
 
         self._export_json_to_file(json.dumps(results), export_filename)
 
@@ -237,7 +237,7 @@ class ZabbixAdmin:
         :return: file
         """
         results = self._get_data(component, label_for_logging,
-                                  output=id_prop_name)
+                                 output=id_prop_name)
         print(results)
         component_ids = [component[id_prop_name] for component in results]
 
@@ -456,14 +456,16 @@ class ZabbixAdmin:
         return reg_action
 
     def _update_template_id(self, reg_action):
+        host = None
         for template in self.original_ids["templates"]:
             if template['templateid'] == reg_action['templateid']:
                 host = template['host']
         for new_template in self.dest_ids['templates']:
-            if 'host' in locals() and host == new_template['host']:
+            if host == new_template['host']:
                 reg_action['templateid'] = new_template['templateid']
 
     def _update_group_id(self, reg_action):
+        name = None
         for group in self.original_ids["hostgroups"]:
             if group['groupid'] == reg_action['groupid']:
                 name = group['name']
