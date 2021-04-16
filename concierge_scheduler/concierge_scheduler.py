@@ -12,11 +12,12 @@ from pyzabbix import ZabbixAPI
 from concierge_docker import DockerAdmin
 from concierge_zabbix import ZabbixAdmin
 
-# DOCKER_URL = "tcp://us-east-1.docker.joyent.com:2376"
-__DEFAULT_CONFIG_DIR = os.getenv('ZABBIX_ETC_DIR') or os.path.abspath(__file__)
-ZABBIX_API_SERVER=os.getenv('ZABBIX_API_SERVER', 'zabbix-web')
-ZABBIX_API_USER=os.getenv('ZABBIX_API_USER', 'Admin')
-ZABBIX_API_PASS=os.getenv('ZABBIX_API_PASS', 'zabbix')
+__DEFAULT_CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
+ZBX_API_HOST = os.getenv('ZBX_API_HOST', 'zabbix-web')
+ZBX_API_USER = os.getenv('ZBX_API_USER', 'Admin')
+ZBX_API_PASS = os.getenv('ZBX_API_PASS', 'zabbix')
+ZBX_TLS_VERIFY = os.getenv('ZBX_TLS_VERIFY', 'true')
+ZBX_FORCE_TEMPLATES = os.getenv('ZBX_FORCE_TEMPLATES', False)
 zbx_client = object
 zbx_admin = object
 
@@ -33,6 +34,7 @@ def arg_parser():
     parses arguments passed on command line when running program
     :return: list of arguments
     """
+
     def add_container_parser(parser):
         # capture arguments for managing containers
         c_parser = parser.add_parser(
@@ -60,6 +62,8 @@ def arg_parser():
             help='directory containing the configuration for the event management system',
             default=__DEFAULT_CONFIG_DIR
         )
+        e_parser.add_argument('--force-templates', action='store_true', default=ZBX_FORCE_TEMPLATES,
+                              help='Forces template configuration to delete all current existing templates')
         return e_parser.add_argument(
             'command', choices=('backup_config', 'restore_config',
                                 'get_simple_id_map'),
@@ -171,10 +175,10 @@ def initiate_zabbix_client():
     create an instance of Zabbix API client
     :return: object
     """
-    url = 'http://{}'.format(ZABBIX_API_SERVER)
-    __info('Logging in using url={} ...', url)
-    client = ZabbixAPI(url)
-    client.login(user=ZABBIX_API_USER, password=ZABBIX_API_PASS)
+    __info('Logging in using url={} ...', ZBX_API_HOST)
+    client = ZabbixAPI(ZBX_API_HOST)
+    client.session.verify = False if ZBX_TLS_VERIFY == 'false' else True
+    client.login(user=ZBX_API_USER, password=ZBX_API_PASS)
     __info('Connected to Zabbix API Version {}', client.api_version())
     return client
 
@@ -197,6 +201,8 @@ if __name__ == '__main__':
                         cmd_args.service_name).run(cmd_args.command)
     elif cmd_args.command in ['backup_config', 'restore_config',
                               'get_simple_id_map']:
-        event_admin(zbx_client, cmd_args.config_dir).run(cmd_args.command)
+        force_templates = False if ZBX_FORCE_TEMPLATES.upper() == "FALSE" else cmd_args.force_templates
+        event_admin(zbx_client, cmd_args.config_dir, cmd_args.force_templates).run(cmd_args.command)
+
     else:
         __log_error_and_fail('Unknown action {}', cmd_args.command)
