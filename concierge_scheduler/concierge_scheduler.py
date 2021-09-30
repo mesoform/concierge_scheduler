@@ -11,13 +11,18 @@ import argparse
 from pyzabbix import ZabbixAPI
 from concierge_docker import DockerAdmin
 from concierge_zabbix import ZabbixAdmin
+from concierge_cloud import GCSAdmin
 
 __DEFAULT_CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
+# BUCKET_NAME = os.getenv('BUCKET_NAME', '') 
+BUCKET_FOLDER = os.getenv('BUCKET_FOLDER', '') 
+GCP_CREDENTIAL_FILE= os.getenv('GCP_CREDENTIAL_FILE') or '~/.config/gcloud/application_default_credentials.json'
+AWS_CREDENTIAL_FILE=os.getenv('AWS_CREDENTIAL_FILE') or '~/.aws/credentials'
 ZBX_API_HOST = os.getenv('ZBX_API_HOST', 'zabbix-web')
 ZBX_API_USER = os.getenv('ZBX_API_USER', 'Admin')
 ZBX_API_PASS = os.getenv('ZBX_API_PASS', 'zabbix')
-ZBX_TLS_VERIFY = os.getenv('ZBX_TLS_VERIFY', 'true')
-ZBX_FORCE_TEMPLATES = os.getenv('ZBX_FORCE_TEMPLATES', False)
+ZBX_TLS_VERIFY = os.getenv('ZBX_TLS_VERIFY', 'True')
+ZBX_FORCE_TEMPLATES = os.getenv('ZBX_FORCE_TEMPLATES', 'False')
 zbx_client = object
 zbx_admin = object
 
@@ -27,7 +32,13 @@ container_administrators = {
 event_administrators = {
     'zabbix': ZabbixAdmin
 }
-
+cloud_administrators = {
+    'gcp': GCSAdmin
+}
+credential_files = {
+    'gcp': GCP_CREDENTIAL_FILE,
+    'aws': AWS_CREDENTIAL_FILE
+}
 
 def arg_parser():
     """
@@ -74,6 +85,57 @@ def arg_parser():
                  'get_simple_id_map:\n'
                  'create a simple JSON file of the IDs to names of hostgroups'
                  ' and templates')
+
+    def add_cloud_parser(parser):
+        cl_parser = parser.add_parser(
+            'cloud', help='commands to control cloud functionality')
+        cl_parser.add_argument(
+            '--bucket-name',
+            help='Name of the bucket to store configuration files in',
+            default=os.getenv('BUCKET_NAME')
+        )
+        cl_parser.add_argument(
+            '--config-dir',
+            help='directory containing the configuration for the event management system',
+            default=__DEFAULT_CONFIG_DIR
+        )
+        cl_parser.add_argument(
+            '--bucket-folder',
+            help='Folder in bucket to upload/read files from',
+            default=BUCKET_FOLDER
+        )
+        return cl_parser.add_argument(
+            'command', choices=('upload'),# 'aws'),
+            help='\nupload:\n'
+                 'upload config files to cloud storage\n'
+                #  'aws:\n'
+                #  'backup to aws S3 bucket'
+                 )
+    # def add_cloud_backup_parser(parser):
+    #     cl_parser = parser.add_parser(
+    #         'cloud_backup', help='backup coinfigurations to cloud storage')
+    #     cl_parser.add_argument(
+    #         '--bucket-name',
+    #         help='Name of the bucket to store configuration files in',
+    #         default=None
+    #     )
+    #     cl_parser.add_argument(
+    #         '--config-dir',
+    #         help='directory containing the configuration for the event management system',
+    #         default=__DEFAULT_CONFIG_DIR
+    #     )
+    #     cl_parser.add_argument(
+    #         '--bucket-folder',
+    #         help='Folder in bucket to upload/read files from',
+    #         default=''
+    #     )
+    #     return cl_parser.add_argument(
+    #         'command', choices=('gcp'),# 'aws'),
+    #         help='\gcp:\n'
+    #              'backup to GCP cloud storage:\n'
+    #             #  'aws:\n'
+    #             #  'backup to aws S3 bucket'
+    #              )
 
     def add_container_list_parser(parser):
         ls_parser = parser.add_parser(
@@ -130,6 +192,11 @@ def arg_parser():
         '--container-engine',
         help='container engine used for managing containers. DEFAULT=docker',
         default='docker')
+    root_parser.add_argument(
+        '--cloud-engine',
+        help='cloud engine used for cloud functionality. DEFAULT=gcp',
+        default='gcp'
+    )
 
     mgmt_parser = \
         root_parser.add_subparsers(help='management system to control')
@@ -141,6 +208,9 @@ def arg_parser():
     add_container_scale_command_parser(scale_parser)
     # capture arguments for managing our event manager
     add_event_parser(mgmt_parser)
+    #capture arguments for managing cloud 
+    add_cloud_parser(mgmt_parser)
+
 
     return root_parser.parse_args()
 
@@ -177,19 +247,32 @@ def initiate_zabbix_client():
     """
     __info('Logging in using url={} ...', ZBX_API_HOST)
     client = ZabbixAPI(ZBX_API_HOST)
+    __info('Username={}', ZBX_API_USER)
+    __info('Password={}', ZBX_API_PASS)
     client.session.verify = False if ZBX_TLS_VERIFY == 'false' else True
     client.login(user=ZBX_API_USER, password=ZBX_API_PASS)
     __info('Connected to Zabbix API Version {}', client.api_version())
     return client
 
+# def initiate_gcp():
+#     """
+#     authenticate with gcp and configure cloud storage client
+#     :return: object
+#     """
+#     gcs = GCSBucketBackup(BUCKET_NAME)
+#     __info('Authenticating with {} credentials')
+#     storage_client = gcs.authenticate(GCP_CREDENTIAL_FILE)
+#     __info('Cnnected to storage client')
+#     return storage_client
 
 if __name__ == '__main__':
     # Capture arguments passed to module
     cmd_args = arg_parser()
     container_admin = container_administrators[cmd_args.container_engine]
-    if cmd_args.event_engine == 'zabbix':
+    if cmd_args.event_engine == 'zabbix' and cmd_args.command != 'upload':
         zbx_client = initiate_zabbix_client()
     event_admin = event_administrators[cmd_args.event_engine]
+    cloud_admin = cloud_administrators[cmd_args.cloud_engine]
 
     if cmd_args.command in ['scale_up', 'scale_down']:
         container_admin(zbx_client, cmd_args.datacenter_url, cmd_args.project,
@@ -203,6 +286,9 @@ if __name__ == '__main__':
                               'get_simple_id_map']:
         force_templates = False if ZBX_FORCE_TEMPLATES.upper() == "FALSE" else cmd_args.force_templates
         event_admin(zbx_client, cmd_args.config_dir, cmd_args.force_templates).run(cmd_args.command)
+    elif cmd_args.command in ['upload']: 
+        cloud_admin(cmd_args.bucket_name, credential_files[cmd_args.cloud_engine], cmd_args.config_dir, 
+           cmd_args.bucket_folder).run(cmd_args.command) 
 
     else:
         __log_error_and_fail('Unknown action {}', cmd_args.command)

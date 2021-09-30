@@ -238,11 +238,13 @@ class ZabbixAdmin:
         """
         results = self._get_data(component, label_for_logging,
                                  output=id_prop_name)
-        print(results)
+        # print("results:")
+        # print(results)
         component_ids = [component[id_prop_name] for component in results]
 
         export_options = {export_option_name: component_ids}
-        print(export_options)
+        # print("export_options:")
+        # print(export_options)
         result = self.zbx_client.configuration.export(options=export_options,
                                                       format='json')
 
