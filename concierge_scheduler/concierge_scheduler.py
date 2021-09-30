@@ -111,31 +111,6 @@ def arg_parser():
                 #  'aws:\n'
                 #  'backup to aws S3 bucket'
                  )
-    # def add_cloud_backup_parser(parser):
-    #     cl_parser = parser.add_parser(
-    #         'cloud_backup', help='backup coinfigurations to cloud storage')
-    #     cl_parser.add_argument(
-    #         '--bucket-name',
-    #         help='Name of the bucket to store configuration files in',
-    #         default=None
-    #     )
-    #     cl_parser.add_argument(
-    #         '--config-dir',
-    #         help='directory containing the configuration for the event management system',
-    #         default=__DEFAULT_CONFIG_DIR
-    #     )
-    #     cl_parser.add_argument(
-    #         '--bucket-folder',
-    #         help='Folder in bucket to upload/read files from',
-    #         default=''
-    #     )
-    #     return cl_parser.add_argument(
-    #         'command', choices=('gcp'),# 'aws'),
-    #         help='\gcp:\n'
-    #              'backup to GCP cloud storage:\n'
-    #             #  'aws:\n'
-    #             #  'backup to aws S3 bucket'
-    #              )
 
     def add_container_list_parser(parser):
         ls_parser = parser.add_parser(
@@ -208,7 +183,7 @@ def arg_parser():
     add_container_scale_command_parser(scale_parser)
     # capture arguments for managing our event manager
     add_event_parser(mgmt_parser)
-    #capture arguments for managing cloud 
+    # capture arguments for managing cloud
     add_cloud_parser(mgmt_parser)
 
 
@@ -254,16 +229,6 @@ def initiate_zabbix_client():
     __info('Connected to Zabbix API Version {}', client.api_version())
     return client
 
-# def initiate_gcp():
-#     """
-#     authenticate with gcp and configure cloud storage client
-#     :return: object
-#     """
-#     gcs = GCSBucketBackup(BUCKET_NAME)
-#     __info('Authenticating with {} credentials')
-#     storage_client = gcs.authenticate(GCP_CREDENTIAL_FILE)
-#     __info('Cnnected to storage client')
-#     return storage_client
 
 if __name__ == '__main__':
     # Capture arguments passed to module
