@@ -11,13 +11,13 @@ import argparse
 from pyzabbix import ZabbixAPI
 from concierge_docker import DockerAdmin
 from concierge_zabbix import ZabbixAdmin
-from concierge_cloud import GCSAdmin
+from concierge_gcs import GCSAdmin
 
 __DEFAULT_CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
 # BUCKET_NAME = os.getenv('BUCKET_NAME', '') 
-BUCKET_FOLDER = os.getenv('BUCKET_FOLDER', '') 
-GCP_CREDENTIAL_FILE= os.getenv('GCP_CREDENTIAL_FILE') or '~/.config/gcloud/application_default_credentials.json'
-AWS_CREDENTIAL_FILE=os.getenv('AWS_CREDENTIAL_FILE') or '~/.aws/credentials'
+BUCKET_FOLDER = os.getenv('BUCKET_FOLDER', '')
+GCP_CREDENTIAL_FILE = os.getenv('GCP_CREDENTIAL_FILE') or '~/.config/gcloud/application_default_credentials.json'
+AWS_CREDENTIAL_FILE = os.getenv('AWS_CREDENTIAL_FILE') or '~/.aws/credentials'
 ZBX_API_HOST = os.getenv('ZBX_API_HOST', 'zabbix-web')
 ZBX_API_USER = os.getenv('ZBX_API_USER', 'Admin')
 ZBX_API_PASS = os.getenv('ZBX_API_PASS', 'zabbix')
@@ -251,9 +251,9 @@ if __name__ == '__main__':
                               'get_simple_id_map']:
         force_templates = False if ZBX_FORCE_TEMPLATES.upper() == "FALSE" else cmd_args.force_templates
         event_admin(zbx_client, cmd_args.config_dir, cmd_args.force_templates).run(cmd_args.command)
-    elif cmd_args.command in ['upload']: 
-        cloud_admin(cmd_args.bucket_name, credential_files[cmd_args.cloud_engine], cmd_args.config_dir, 
-           cmd_args.bucket_folder).run(cmd_args.command) 
+    elif cmd_args.command in ['upload']:
+        cloud_admin(credential_files[cmd_args.cloud_engine], cmd_args.bucket_name, cmd_args.config_dir,
+                    cmd_args.bucket_folder).run(cmd_args.command)
 
     else:
         __log_error_and_fail('Unknown action {}', cmd_args.command)
