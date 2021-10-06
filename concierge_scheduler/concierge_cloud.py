@@ -34,14 +34,12 @@ __LOG = get_logger(__name__)
 
 
 class CloudInterface:
-    def __init__(self, credential_file_path, bucket_name, config_dir):
+    def __init__(self, credential_file_path, config_dir):
         """
         :param credential_file_path: Path to credential file for cloud services
-        :param bucket_name: Name of bucket/blob
         :param config_dir: Path to directory containing configuration files
         """
         self._load_credential_file(credential_file_path)
-        self.bucket_name = bucket_name
         self.config_dir = config_dir
         self.client = None
         self.command_mapping = {
@@ -49,8 +47,8 @@ class CloudInterface:
             'authenticate': self.authenticate
         }
 
-    def run(self, action):
-        self.command_mapping[action]()
+    def run(self, action, **kwargs):
+        self.command_mapping[action](**kwargs)
 
     def _load_credential_file(self, credential_file_path):
         """
@@ -85,9 +83,11 @@ class CloudInterface:
         """
         raise NotImplementedError
 
-    def upload_local_dir(self):
+    def upload_local_dir(self, name, folder=''):
         """
         Upload contents of local directory to bucket/blob
+        :param name: Name of the bucket/blob to upload config_dir to
+        :param folder: (optional) Folder within bucket/blob to upload config_dir to
         """
         raise NotImplementedError
 

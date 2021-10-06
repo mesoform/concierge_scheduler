@@ -36,17 +36,13 @@ __LOG = get_logger(__name__)
 
 
 class GCSAdmin(CloudInterface):
-    def __init__(self, credential_file_path, bucket_name, config_dir, bucket_folder=''):
+    def __init__(self, credential_file_path, config_dir):
         """
         :param credential_file_path: Path to GCP service account credential file
-        :param bucket_name: Name of Cloud Storage bucket
         :param config_dir: Path to directory containing configuration files
-        :param bucket_folder: Folder within bucket <bucket_name> that files are stored 
         """
-        super().__init__(credential_file_path, bucket_name, config_dir)
+        super().__init__(credential_file_path, config_dir)
         self.authenticate()
-        self.bucket_name = bucket_name
-        self.bucket_folder = bucket_folder
 
     def authenticate(self):
         _info('Connecting to Google Cloud Storage...')
@@ -54,18 +50,20 @@ class GCSAdmin(CloudInterface):
         self.client = storage.Client(project=self.credential_file['project_id'], credentials=storage_credentials)
         _info('Connected to Google Cloud Storage')
 
-    def upload_local_dir(self):
+    def upload_local_dir(self, name, folder=''):
         """
-        Upload contents of local directory to bucket
+        Upload contents of local directory to bucket/blob
+        :param name: Name of the bucket to upload config_dir to
+        :param folder: (optional) Folder within bucket to upload config_dir to
         """
-        _info('Uploading files to {}', self.bucket_name)
+        _info('Uploading files to {}', name)
         config_files = self._get_config_files()
-        bucket = self.client.get_bucket(self.bucket_name)
+        bucket = self.client.get_bucket(name)
         directory = os.path.basename(os.path.dirname(config_files[0]))
         for filename in config_files:
             file = os.path.basename(filename)
             _info('Uploading {}...', file)
-            remote_path = os.path.join(self.bucket_folder, directory, file)
+            remote_path = os.path.join(folder, directory, file)
             blob = bucket.blob(remote_path)
             blob.upload_from_filename(filename)
         _info('Files uploaded')

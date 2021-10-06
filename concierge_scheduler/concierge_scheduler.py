@@ -14,7 +14,7 @@ from concierge_zabbix import ZabbixAdmin
 from concierge_gcs import GCSAdmin
 
 __DEFAULT_CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
-# BUCKET_NAME = os.getenv('BUCKET_NAME', '') 
+BUCKET_NAME = os.getenv('BUCKET_NAME', '') 
 BUCKET_FOLDER = os.getenv('BUCKET_FOLDER', '')
 GCP_CREDENTIAL_FILE = os.getenv('GCP_CREDENTIAL_FILE') or '~/.config/gcloud/application_default_credentials.json'
 AWS_CREDENTIAL_FILE = os.getenv('AWS_CREDENTIAL_FILE') or '~/.aws/credentials'
@@ -39,6 +39,7 @@ credential_files = {
     'gcp': GCP_CREDENTIAL_FILE,
     'aws': AWS_CREDENTIAL_FILE
 }
+
 
 def arg_parser():
     """
@@ -92,7 +93,7 @@ def arg_parser():
         cl_parser.add_argument(
             '--bucket-name',
             help='Name of the bucket to store configuration files in',
-            default=os.getenv('BUCKET_NAME')
+            default=BUCKET_NAME
         )
         cl_parser.add_argument(
             '--config-dir',
@@ -186,7 +187,6 @@ def arg_parser():
     # capture arguments for managing cloud
     add_cloud_parser(mgmt_parser)
 
-
     return root_parser.parse_args()
 
 
@@ -222,8 +222,6 @@ def initiate_zabbix_client():
     """
     __info('Logging in using url={} ...', ZBX_API_HOST)
     client = ZabbixAPI(ZBX_API_HOST)
-    __info('Username={}', ZBX_API_USER)
-    __info('Password={}', ZBX_API_PASS)
     client.session.verify = False if ZBX_TLS_VERIFY == 'false' else True
     client.login(user=ZBX_API_USER, password=ZBX_API_PASS)
     __info('Connected to Zabbix API Version {}', client.api_version())
@@ -252,8 +250,8 @@ if __name__ == '__main__':
         force_templates = False if ZBX_FORCE_TEMPLATES.upper() == "FALSE" else cmd_args.force_templates
         event_admin(zbx_client, cmd_args.config_dir, cmd_args.force_templates).run(cmd_args.command)
     elif cmd_args.command in ['upload']:
-        cloud_admin(credential_files[cmd_args.cloud_engine], cmd_args.bucket_name, cmd_args.config_dir,
-                    cmd_args.bucket_folder).run(cmd_args.command)
+        cloud_admin(credential_files[cmd_args.cloud_engine], cmd_args.config_dir).run(
+            action=cmd_args.command, name=cmd_args.bucket_name, folder=cmd_args.bucket_folder)
 
     else:
         __log_error_and_fail('Unknown action {}', cmd_args.command)

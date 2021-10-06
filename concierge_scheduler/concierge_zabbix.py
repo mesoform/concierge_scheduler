@@ -238,13 +238,9 @@ class ZabbixAdmin:
         """
         results = self._get_data(component, label_for_logging,
                                  output=id_prop_name)
-        # print("results:")
-        # print(results)
         component_ids = [component[id_prop_name] for component in results]
 
         export_options = {export_option_name: component_ids}
-        # print("export_options:")
-        # print(export_options)
         result = self.zbx_client.configuration.export(options=export_options,
                                                       format='json')
 
@@ -320,6 +316,7 @@ class ZabbixAdmin:
             try:
                 self.zbx_client.confimport('json', component_data, _rules)
             except ZabbixAPIException:
+                _warn('Could not import configuration for {}. Attempting manual {} update', component, component)
                 if component == 'templates' and self.force_template:
                     _info('Deleting all current templates')
                     self.delete_all(component)
@@ -384,7 +381,7 @@ class ZabbixAdmin:
                 ids_to_delete.append(import_id)
 
         for del_id in list(ids_to_delete):
-            print("Deleting '{}' id: {}".format(component, del_id))
+            _info("Deleting '{}' id: {}", component, del_id)
             getattr(self.zbx_client, self.id_mapping[component]['api_name']).delete(del_id)
 
     def delete_all(self, component):
