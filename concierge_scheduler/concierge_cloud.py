@@ -1,7 +1,6 @@
-import json
-import os
 import logging
 import sys
+from abc import ABCMeta, abstractmethod
 
 
 # logging
@@ -33,62 +32,50 @@ def _log_error_and_fail(message, *args):
 __LOG = get_logger(__name__)
 
 
-class CloudInterface:
-    def __init__(self, credential_file_path, config_dir):
-        """
-        :param credential_file_path: Path to credential file for cloud services
-        :param config_dir: Path to directory containing configuration files
-        """
-        self._load_credential_file(credential_file_path)
-        self.config_dir = config_dir
-        self.client = None
-        self.command_mapping = {
-            'upload': self.upload_local_dir,
-            'authenticate': self.authenticate
-        }
+class CloudBackupInterface(metaclass=ABCMeta):
+    __remote_url = NotImplemented
 
-    def run(self, action, **kwargs):
-        self.command_mapping[action](**kwargs)
+    @property
+    @abstractmethod
+    def remote_url(self) -> str:
+        return self.__remote_url
 
-    def _load_credential_file(self, credential_file_path):
-        """
-        Loads credential file. If filetype is JSON/YAML will parse to JSON object
-        otherwise will read as text.
-        """
-        with open(credential_file_path, 'r') as f:
-            _info('Loading {} credential file...', credential_file_path)
-            if credential_file_path.lower().endswith(('.json', '.yaml', '.yml')):
-                try:
-                    self.credential_file = json.load(f)
-                except json.JSONDecodeError:
-                    _log_error_and_fail('Decoding JSON failed for {}', credential_file_path)
-            else:
-                self.credential_file = f.read()
+    @remote_url.setter
+    @abstractmethod
+    def remote_url(self, url: str):
+        self.__remote_url = url
 
-    def _get_config_files(self) -> list:
-        """
-        Get all the files in the config_dir directory
-        :return: List of the paths for files in config_dir
-        """
-        assert os.path.isdir(self.config_dir)
-        config_files = []
-        for root, dirs, files in os.walk(self.config_dir):
-            for file in files:
-                config_files.append(os.path.join(root, file))
-        return config_files
+    @classmethod
+    def __subclasshook__(cls, subclass):
+        return (hasattr(subclass, 'authenticate') and
+                callable(subclass.authenticate) and
+                hasattr(subclass, 'assemble_upload_list') and
+                callable(subclass.assemble_upload_list) and
+                hasattr(subclass, 'upload') and
+                callable(subclass.upload) or
+                NotImplemented)
 
-    def authenticate(self):
+    @abstractmethod
+    def authenticate(self) -> object:
         """
-        Authenticates using credentials from credential file
+        Instantiate an authenticated client object to be used for uploading files
+        :return: object
         """
         raise NotImplementedError
 
-    def upload_local_dir(self, name, folder=''):
+    @abstractmethod
+    def assemble_upload_list(self) -> set:
         """
-        Upload contents of local directory to bucket/blob
-        :param name: Name of the bucket/blob to upload config_dir to
-        :param folder: (optional) Folder within bucket/blob to upload config_dir to
+        Assemble a list of files or directories to be uploaded to Cloud provider
+        :return: set
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def upload(self, upload_files_list: set):
+        """
+        Upload files to a remote storage location
+        :param upload_files_list: set: strings of fully qualified paths to file or directories to upload
+        """
+        raise NotImplementedError
 

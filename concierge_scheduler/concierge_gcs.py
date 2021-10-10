@@ -3,7 +3,7 @@ import sys
 import logging
 from google.cloud import storage
 from google.oauth2 import service_account
-from concierge_cloud import CloudInterface
+from concierge_cloud import CloudBackupInterface
 
 
 # logging
@@ -35,22 +35,24 @@ def _log_error_and_fail(message, *args):
 __LOG = get_logger(__name__)
 
 
-class GCSAdmin(CloudInterface):
+class GCSAdmin(CloudBackupInterface):
     def __init__(self, credential_file_path, config_dir):
         """
         :param credential_file_path: Path to GCP service account credential file
         :param config_dir: Path to directory containing configuration files
         """
-        super().__init__(credential_file_path, config_dir)
-        self.authenticate()
+        self._client = self.authenticate()
+        self.credential = credential_file_path
+        self.config_dir = config_dir
 
     def authenticate(self):
         _info('Connecting to Google Cloud Storage...')
         storage_credentials = service_account.Credentials.from_service_account_info(self.credential_file)
-        self.client = storage.Client(project=self.credential_file['project_id'], credentials=storage_credentials)
+        client = storage.Client(project=self.credential_file['project_id'], credentials=storage_credentials)
         _info('Connected to Google Cloud Storage')
+        return client
 
-    def upload_local_dir(self, name, folder=''):
+    def upload(self, name, folder=''):
         """
         Upload contents of local directory to bucket/blob
         :param name: Name of the bucket to upload config_dir to
