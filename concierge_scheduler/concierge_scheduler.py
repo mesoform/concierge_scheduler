@@ -11,7 +11,7 @@ import argparse
 from pyzabbix import ZabbixAPI
 from concierge_docker import DockerAdmin
 from concierge_zabbix import ZabbixAdmin
-from concierge_gcs import GCSAdmin
+from concierge_gcs import GCSBackup
 
 __DEFAULT_CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
 BUCKET_NAME = os.getenv('BUCKET_NAME', '') 
@@ -33,7 +33,7 @@ event_administrators = {
     'zabbix': ZabbixAdmin
 }
 cloud_administrators = {
-    'gcp': GCSAdmin
+    'gcp': GCSBackup
 }
 credential_files = {
     'gcp': GCP_CREDENTIAL_FILE,
@@ -235,7 +235,6 @@ if __name__ == '__main__':
     if cmd_args.event_engine == 'zabbix' and cmd_args.command != 'upload':
         zbx_client = initiate_zabbix_client()
     event_admin = event_administrators[cmd_args.event_engine]
-    cloud_admin = cloud_administrators[cmd_args.cloud_engine]
 
     if cmd_args.command in ['scale_up', 'scale_down']:
         container_admin(zbx_client, cmd_args.datacenter_url, cmd_args.project,
@@ -250,8 +249,15 @@ if __name__ == '__main__':
         force_templates = False if ZBX_FORCE_TEMPLATES.upper() == "FALSE" else cmd_args.force_templates
         event_admin(zbx_client, cmd_args.config_dir, cmd_args.force_templates).run(cmd_args.command)
     elif cmd_args.command in ['upload']:
-        cloud_admin(credential_files[cmd_args.cloud_engine], cmd_args.config_dir).run(
-            action=cmd_args.command, name=cmd_args.bucket_name, folder=cmd_args.bucket_folder)
+        __info('Connecting to {}...', cmd_args.cloud_engine)
+        cloud_admin = cloud_administrators[cmd_args.cloud_engine](
+            credential_file_path=credential_files[cmd_args.cloud_engine], config_dir=cmd_args.config_dir)
+        __info('Authenticated with {}', cmd_args.cloud_engine)
+        cloud_admin.set_storage_location(location=cmd_args.bucket_name)
+        upload_list = cloud_admin.assemble_upload_list()
+        __info('Uploading {} to {} ...', upload_list, cmd_args.bucket_name)
+        cloud_admin.upload(upload_list=upload_list, folder=cmd_args.bucket_folder)
+        __info('Finished uploading files.')
 
     else:
         __log_error_and_fail('Unknown action {}', cmd_args.command)
