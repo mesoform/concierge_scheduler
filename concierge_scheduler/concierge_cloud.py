@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 
 class CloudBackupInterface(metaclass=ABCMeta):
-    _storage_location = NotImplemented
+    __storage_location = NotImplemented
 
     @classmethod
     def __subclasshook__(cls, subclass):
@@ -16,11 +16,11 @@ class CloudBackupInterface(metaclass=ABCMeta):
 
     @property
     def storage_location(self) -> str:
-        return self._storage_location
+        return self.__storage_location
 
     @storage_location.setter
     def storage_location(self, location):
-        self._storage_location = location
+        self.__storage_location = location
 
     @abstractmethod
     def authenticate(self) -> object:
