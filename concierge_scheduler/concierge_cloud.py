@@ -14,13 +14,13 @@ class CloudBackupInterface(metaclass=ABCMeta):
                 callable(subclass.upload) or
                 NotImplemented)
 
-    @abstractmethod
-    def set_storage_location(self, location: str):
-        """
-        Set the location to backup files to
-        :param location: location string
-        """
-        raise NotImplementedError
+    @property
+    def storage_location(self) -> str:
+        return self._storage_location
+
+    @storage_location.setter
+    def storage_location(self, location):
+        self._storage_location = location
 
     @abstractmethod
     def authenticate(self) -> object:

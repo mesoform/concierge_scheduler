@@ -14,8 +14,8 @@ from concierge_zabbix import ZabbixAdmin
 from concierge_gcs import GCSBackup
 
 __DEFAULT_CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
-BUCKET_NAME = os.getenv('BUCKET_NAME', '') 
-BUCKET_FOLDER = os.getenv('BUCKET_FOLDER', '')
+STORAGE_LOCATION = os.getenv('STORAGE_LOCATION', '')
+STORAGE_FOLDER = os.getenv('STORAGE_FOLDER', '')
 GCP_CREDENTIAL_FILE = os.getenv('GCP_CREDENTIAL_FILE') or '~/.config/gcloud/application_default_credentials.json'
 AWS_CREDENTIAL_FILE = os.getenv('AWS_CREDENTIAL_FILE') or '~/.aws/credentials'
 ZBX_API_HOST = os.getenv('ZBX_API_HOST', 'zabbix-web')
@@ -91,9 +91,9 @@ def arg_parser():
         cl_parser = parser.add_parser(
             'cloud', help='commands to control cloud functionality')
         cl_parser.add_argument(
-            '--bucket-name',
-            help='Name of the bucket to store configuration files in',
-            default=BUCKET_NAME
+            '--storage-location',
+            help='Remote storage location name/url to store configuration files in',
+            default=STORAGE_LOCATION
         )
         cl_parser.add_argument(
             '--config-dir',
@@ -101,17 +101,15 @@ def arg_parser():
             default=__DEFAULT_CONFIG_DIR
         )
         cl_parser.add_argument(
-            '--bucket-folder',
-            help='Folder in bucket to upload/read files from',
-            default=BUCKET_FOLDER
+            '--storage-folder',
+            help='Folder in storage location to upload files to',
+            default=STORAGE_FOLDER
         )
         return cl_parser.add_argument(
-            'command', choices=('upload'),# 'aws'),
+            'command', choices='upload',
             help='\nupload:\n'
                  'upload config files to cloud storage\n'
-                #  'aws:\n'
-                #  'backup to aws S3 bucket'
-                 )
+        )
 
     def add_container_list_parser(parser):
         ls_parser = parser.add_parser(
@@ -251,12 +249,11 @@ if __name__ == '__main__':
     elif cmd_args.command in ['upload']:
         __info('Connecting to {}...', cmd_args.cloud_engine)
         cloud_admin = cloud_administrators[cmd_args.cloud_engine](
-            credential_file_path=credential_files[cmd_args.cloud_engine], config_dir=cmd_args.config_dir)
+            credential_files[cmd_args.cloud_engine], cmd_args.config_dir, cmd_args.storage_location)
         __info('Authenticated with {}', cmd_args.cloud_engine)
-        cloud_admin.set_storage_location(location=cmd_args.bucket_name)
         upload_list = cloud_admin.assemble_upload_list()
-        __info('Uploading {} to {} ...', upload_list, cmd_args.bucket_name)
-        cloud_admin.upload(upload_list=upload_list, folder=cmd_args.bucket_folder)
+        __info('Uploading {} to {} ...', upload_list, cmd_args.storage_location)
+        cloud_admin.upload(upload_list=upload_list, folder=cmd_args.storage_folder)
         __info('Finished uploading files.')
 
     else:

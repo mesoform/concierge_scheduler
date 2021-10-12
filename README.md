@@ -17,8 +17,9 @@ Set the following environment variables in the docker-compose.yml file for the Z
 `ZBX_FORCE_TEMPLATES`: Will delete all templates in destination zabbix server before importing configuration. 
 Setting to anything other than `'false'` will enable this. Can also use the `--force-templates` flag   
 `GCP_CREDENTIAL_FILE:` Credential file of GCP service account for cloud storage   
-`BUCKET_NAME`: Name of cloud bucket for storage of configs  
-`BUCKET_FOLDER`: Folder within bucket for storage  
+`STORAGE_LOCATION`: Remote storage location to store configuration files in. 
+E.g. Cloud Storage bucket name or Azure Container   
+`STORAGE_FOLDER`: Folder within bucket/container to upload files to
 
 
 
@@ -122,7 +123,7 @@ Actions known to the scheduler include the following:
     
     Given a component (e.g: consul) which needs to be scaled down, functions `pre_pem_file` and `generate_pem_file` construct certificates from the inventory of a component dummy host containing the relevant data and call function `scale_down` with the current number of containers for the component (`current_scale`) and the number we want to reduce (`decrement`). Once the component is decremented to the desired scale the certificates will be deleted.
 
-6. **upload**: this action will upload files in specified config directory to a cloud storage bucket. Defaults to using GCP Cloud Storage. 
+6. **upload**: this action will upload files in specified config directory to a cloud storage location. Defaults to using GCP Cloud Storage. 
     
 ### Individual Use
 The scheduler can be used outside the concierge paradigm to perform Zabbix configuration import/exports. 
@@ -143,8 +144,8 @@ python concierge_scheduler.py event restore_config
 
 ##Upload ZBX_CONFIG_DIR to GCS bucket 
 export GCP_CREDENTIAL_FILE=/credentials-file.json
-export BUCKET_NAME=gcp-bucket-name
-export BUCKET_FOLDER=subfolder-for-config-folders
+export STORAGE_LOCATION=gcs-bucket-name
+export STORAGE_FOLDER=subfolder-for-config-folders
 
 python concierge_scheduler.py cloud upload
 ```
