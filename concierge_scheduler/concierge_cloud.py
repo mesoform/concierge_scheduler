@@ -1,49 +1,8 @@
-import logging
-import sys
 from abc import ABCMeta, abstractmethod
 
 
-# logging
-def get_logger(name):
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
-    stream = logging.StreamHandler()
-    fmt = logging.Formatter('%(asctime)s [%(threadName)s] '
-                            '[%(name)s] %(levelname)s: %(message)s')
-    stream.setFormatter(fmt)
-    logger.addHandler(stream)
-
-    return logger
-
-
-def _info(message, *args):
-    __LOG.log(logging.INFO, message.format(*args))
-
-
-def _warn(message, *args):
-    __LOG.log(logging.WARN, message.format(*args))
-
-
-def _log_error_and_fail(message, *args):
-    __LOG.log(logging.ERROR, message.format(*args))
-    sys.exit(-1)
-
-
-__LOG = get_logger(__name__)
-
-
 class CloudBackupInterface(metaclass=ABCMeta):
-    __remote_url = NotImplemented
-
-    @property
-    @abstractmethod
-    def remote_url(self) -> str:
-        return self.__remote_url
-
-    @remote_url.setter
-    @abstractmethod
-    def remote_url(self, url: str):
-        self.__remote_url = url
+    _storage_location = NotImplemented
 
     @classmethod
     def __subclasshook__(cls, subclass):
@@ -54,6 +13,14 @@ class CloudBackupInterface(metaclass=ABCMeta):
                 hasattr(subclass, 'upload') and
                 callable(subclass.upload) or
                 NotImplemented)
+
+    @abstractmethod
+    def set_storage_location(self, location: str):
+        """
+        Set the location to backup files to
+        :param location: location string
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def authenticate(self) -> object:
@@ -72,10 +39,9 @@ class CloudBackupInterface(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def upload(self, upload_files_list: set):
+    def upload(self, upload_list: set):
         """
         Upload files to a remote storage location
-        :param upload_files_list: set: strings of fully qualified paths to file or directories to upload
+        :param upload_list: set: strings of fully qualified paths to file or directories to upload
         """
         raise NotImplementedError
-
