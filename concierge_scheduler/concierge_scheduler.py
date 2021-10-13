@@ -11,13 +11,18 @@ import argparse
 from pyzabbix import ZabbixAPI
 from concierge_docker import DockerAdmin
 from concierge_zabbix import ZabbixAdmin
+from concierge_gcs import GCSBackup
 
 __DEFAULT_CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
+STORAGE_LOCATION = os.getenv('STORAGE_LOCATION', '')
+STORAGE_FOLDER = os.getenv('STORAGE_FOLDER', '')
+GCP_CREDENTIAL_FILE = os.getenv('GCP_CREDENTIAL_FILE') or '~/.config/gcloud/application_default_credentials.json'
+AWS_CREDENTIAL_FILE = os.getenv('AWS_CREDENTIAL_FILE') or '~/.aws/credentials'
 ZBX_API_HOST = os.getenv('ZBX_API_HOST', 'zabbix-web')
 ZBX_API_USER = os.getenv('ZBX_API_USER', 'Admin')
 ZBX_API_PASS = os.getenv('ZBX_API_PASS', 'zabbix')
-ZBX_TLS_VERIFY = os.getenv('ZBX_TLS_VERIFY', 'true')
-ZBX_FORCE_TEMPLATES = os.getenv('ZBX_FORCE_TEMPLATES', False)
+ZBX_TLS_VERIFY = os.getenv('ZBX_TLS_VERIFY', 'True')
+ZBX_FORCE_TEMPLATES = os.getenv('ZBX_FORCE_TEMPLATES', 'False')
 zbx_client = object
 zbx_admin = object
 
@@ -26,6 +31,13 @@ container_administrators = {
 }
 event_administrators = {
     'zabbix': ZabbixAdmin
+}
+cloud_administrators = {
+    'gcp': GCSBackup
+}
+credential_files = {
+    'gcp': GCP_CREDENTIAL_FILE,
+    'aws': AWS_CREDENTIAL_FILE
 }
 
 
@@ -74,6 +86,30 @@ def arg_parser():
                  'get_simple_id_map:\n'
                  'create a simple JSON file of the IDs to names of hostgroups'
                  ' and templates')
+
+    def add_cloud_parser(parser):
+        cl_parser = parser.add_parser(
+            'cloud', help='commands to control cloud functionality')
+        cl_parser.add_argument(
+            '--storage-location',
+            help='Remote storage location name/url to store configuration files in',
+            default=STORAGE_LOCATION
+        )
+        cl_parser.add_argument(
+            '--config-dir',
+            help='directory containing the configuration for the event management system',
+            default=__DEFAULT_CONFIG_DIR
+        )
+        cl_parser.add_argument(
+            '--storage-folder',
+            help='Folder in storage location to upload files to',
+            default=STORAGE_FOLDER
+        )
+        return cl_parser.add_argument(
+            'command', choices='upload',
+            help='\nupload:\n'
+                 'upload config files to cloud storage\n'
+        )
 
     def add_container_list_parser(parser):
         ls_parser = parser.add_parser(
@@ -130,6 +166,11 @@ def arg_parser():
         '--container-engine',
         help='container engine used for managing containers. DEFAULT=docker',
         default='docker')
+    root_parser.add_argument(
+        '--cloud-engine',
+        help='cloud engine used for cloud functionality. DEFAULT=gcp',
+        default='gcp'
+    )
 
     mgmt_parser = \
         root_parser.add_subparsers(help='management system to control')
@@ -141,6 +182,8 @@ def arg_parser():
     add_container_scale_command_parser(scale_parser)
     # capture arguments for managing our event manager
     add_event_parser(mgmt_parser)
+    # capture arguments for managing cloud
+    add_cloud_parser(mgmt_parser)
 
     return root_parser.parse_args()
 
@@ -187,7 +230,7 @@ if __name__ == '__main__':
     # Capture arguments passed to module
     cmd_args = arg_parser()
     container_admin = container_administrators[cmd_args.container_engine]
-    if cmd_args.event_engine == 'zabbix':
+    if cmd_args.event_engine == 'zabbix' and cmd_args.command != 'upload':
         zbx_client = initiate_zabbix_client()
     event_admin = event_administrators[cmd_args.event_engine]
 
@@ -203,6 +246,15 @@ if __name__ == '__main__':
                               'get_simple_id_map']:
         force_templates = False if ZBX_FORCE_TEMPLATES.upper() == "FALSE" else cmd_args.force_templates
         event_admin(zbx_client, cmd_args.config_dir, cmd_args.force_templates).run(cmd_args.command)
+    elif cmd_args.command in ['upload']:
+        __info('Connecting to {}...', cmd_args.cloud_engine)
+        cloud_admin = cloud_administrators[cmd_args.cloud_engine](
+            credential_files[cmd_args.cloud_engine], cmd_args.config_dir, cmd_args.storage_location)
+        __info('Authenticated with {}', cmd_args.cloud_engine)
+        upload_list = cloud_admin.assemble_upload_list()
+        __info('Uploading {} to {} ...', upload_list, cmd_args.storage_location)
+        cloud_admin.upload(upload_list=upload_list, folder=cmd_args.storage_folder)
+        __info('Finished uploading files.')
 
     else:
         __log_error_and_fail('Unknown action {}', cmd_args.command)

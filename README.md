@@ -15,7 +15,12 @@ Set the following environment variables in the docker-compose.yml file for the Z
 `ZBX_CONFIG_DIR`: The source path for the Zabbix backup/export files \
 `ZBX_TLS_VERIFY`: `'true'` to enable ssl verification (default), `'false'` to disable \
 `ZBX_FORCE_TEMPLATES`: Will delete all templates in destination zabbix server before importing configuration. 
-Setting to anything other than `'false'` will enable this. Can also use the `--force-templates` flag to 
+Setting to anything other than `'false'` will enable this. Can also use the `--force-templates` flag   
+`GCP_CREDENTIAL_FILE:` Credential file of GCP service account for cloud storage   
+`STORAGE_LOCATION`: Remote storage location to store configuration files in. 
+E.g. Cloud Storage bucket name or Azure Container   
+`STORAGE_FOLDER`: Folder within bucket/container to upload files to
+
 
 
 Example:
@@ -117,7 +122,35 @@ Actions known to the scheduler include the following:
     Logic insight:
     
     Given a component (e.g: consul) which needs to be scaled down, functions `pre_pem_file` and `generate_pem_file` construct certificates from the inventory of a component dummy host containing the relevant data and call function `scale_down` with the current number of containers for the component (`current_scale`) and the number we want to reduce (`decrement`). Once the component is decremented to the desired scale the certificates will be deleted.
+
+6. **upload**: this action will upload files in specified config directory to a cloud storage location. Defaults to using GCP Cloud Storage. 
     
+### Individual Use
+The scheduler can be used outside the concierge paradigm to perform Zabbix configuration import/exports. 
+This will require the `pyzabbix` library.  
+Backing up existing zabbix configuration:
+```bash
+export ZBX_CONFIG_DIR=/zbx-config/
+export ZBX_API_USER="Admin"
+export ZBX_API_HOST="http://company-zabbix-frontend.com/"
+export ZBX_API_PASS="zabbix"
+export ZBX_TLS_VERIFY='false'
+
+##Backup existing configuration
+python concierge_scheduler.py event backup_config
+
+##Restore configuration from configuration files
+python concierge_scheduler.py event restore_config
+
+##Upload ZBX_CONFIG_DIR to GCS bucket 
+export GCP_CREDENTIAL_FILE=/credentials-file.json
+export STORAGE_LOCATION=gcs-bucket-name
+export STORAGE_FOLDER=subfolder-for-config-folders
+
+python concierge_scheduler.py cloud upload
+```
+
+
 ## Notes
 
 * With container infrastructures, like Joyent's Triton, that manage placement of containers and allow containers to be first-class citizen's on the host and network, simply running docker-compose will be fine. However, when running containers on other infrastructures you may need to perform a little extra work to set up Docker Engine in Swarm Mode and scale services using docker service.

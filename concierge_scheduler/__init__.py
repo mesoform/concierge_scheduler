@@ -4,5 +4,6 @@
 __all__ = [
     'concierge_scheduler',
     'concierge_zabbix',
-    'concierge_docker'
+    'concierge_docker',
+    'concierge_cloud'
 ]
