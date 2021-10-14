@@ -213,6 +213,14 @@ def __log_error_and_fail(message, *args):
     sys.exit(-1)
 
 
+def process_password():
+    password = ZBX_API_PASS
+    if os.path.isfile(ZBX_API_PASS):
+        with open(ZBX_API_PASS, 'r') as f:
+            password = f.readline().strip()
+    return password
+
+
 def initiate_zabbix_client():
     """
     create an instance of Zabbix API client
@@ -221,7 +229,7 @@ def initiate_zabbix_client():
     __info('Logging in using url={} ...', ZBX_API_HOST)
     client = ZabbixAPI(ZBX_API_HOST)
     client.session.verify = False if ZBX_TLS_VERIFY == 'false' else True
-    client.login(user=ZBX_API_USER, password=ZBX_API_PASS)
+    client.login(user=ZBX_API_USER, password=process_password())
     __info('Connected to Zabbix API Version {}', client.api_version())
     return client
 

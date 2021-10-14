@@ -11,7 +11,7 @@ Set the following environment variables in the docker-compose.yml file for the Z
 
 `ZBX_API_HOST`: The Zabbix web frontend endpoint \
 `ZBX_API_USER`: A Zabbix username to access the web API \
-`ZBX_API_PASS`: Password for the above Zabbix username \
+`ZBX_API_PASS`: Password for the above Zabbix username, or absolute path to password file \
 `ZBX_CONFIG_DIR`: The source path for the Zabbix backup/export files \
 `ZBX_TLS_VERIFY`: `'true'` to enable ssl verification (default), `'false'` to disable \
 `ZBX_FORCE_TEMPLATES`: Will delete all templates in destination zabbix server before importing configuration. 
