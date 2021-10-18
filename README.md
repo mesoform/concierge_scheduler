@@ -124,10 +124,40 @@ Actions known to the scheduler include the following:
     Given a component (e.g: consul) which needs to be scaled down, functions `pre_pem_file` and `generate_pem_file` construct certificates from the inventory of a component dummy host containing the relevant data and call function `scale_down` with the current number of containers for the component (`current_scale`) and the number we want to reduce (`decrement`). Once the component is decremented to the desired scale the certificates will be deleted.
 
 6. **upload**: this action will upload files in specified config directory to a cloud storage location. Defaults to using GCP Cloud Storage. 
-    
-### Individual Use
+
+## Image Use
+To perform actions using the `concierge_scheduler` image, the required environment variables must be set, 
+and actions performed using command below. **Note**: Actions will be performed in order `b`->`r`->`u`->`d` 
+regardless of command combination order (e.g. `-bud` will be performed in same order as `-dub`)
+* `-b`: run `backup_config`
+* `-r`: run `restore_config`
+* `-u`: run `upload`
+* `-d`: delete `ZBX_CONFIG_DIR` (after running other commands)  
+
+### Examples
+Using `docker run` to perform restore_config:
+```shell
+docker create -e ZBX_CONFIG_DIR=/config-dir --env-file .env-file mesoform/concierge_scheduler -r
+```
+Using `docker-compose.yml` to perform backup_config, then upload to cloud :
+```yaml
+service:
+  concierge_scheduler:
+    image: mesoform/concierge_scheduler
+    env-file: 
+       - .env-file
+    environment:
+       - ZBX_CONFIG_DIR=/config-dir
+    command: ["-bu"]
+```
+
+## Individual Use
 The scheduler can be used outside the concierge paradigm to perform Zabbix configuration import/exports. 
-This will require the `pyzabbix` library.  
+Some external libraries are required performing actions:
+* `pyzabbix`: Required for Zabbix API usage
+* (Optional) `google-auth`: Required for authentication with GCP 
+* (Optional) `google-cloud-storage`: Required for uploading files to GCS
+
 Backing up existing zabbix configuration:
 ```bash
 export ZBX_CONFIG_DIR=/zbx-config/
