@@ -29,7 +29,7 @@ if [ $BACKUP == true ]; then
 fi
 if [ $RESTORE == true ]; then
   echo "$( date -u '+%F %T') INFO: Restoring Zabbix configuration from $ZBX_CONFIG_DIR"
-  if python /concierge_scheduler/concierge_scheduler/concierge_scheduler.py event backup_config; then
+  if python /concierge_scheduler/concierge_scheduler/concierge_scheduler.py event restore_config; then
     echo "$( date -u '+%F %T') INFO: Restored configuration to $ZBX_API_HOST"
   else
     echo "$( date -u '+%F %T') ERROR: Failed to restore zabbix configuration"
