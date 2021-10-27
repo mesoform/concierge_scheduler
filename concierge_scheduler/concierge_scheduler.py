@@ -8,11 +8,11 @@ import os
 import sys
 import logging
 import argparse
+import urllib3
 from pyzabbix import ZabbixAPI
 from concierge_docker import DockerAdmin
 from concierge_zabbix import ZabbixAdmin
 from concierge_gcs import GCSBackup
-
 __DEFAULT_CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
 STORAGE_LOCATION = os.getenv('STORAGE_LOCATION', '')
 STORAGE_FOLDER = os.getenv('STORAGE_FOLDER', '')
@@ -228,7 +228,9 @@ def initiate_zabbix_client():
     """
     __info('Logging in using url={} ...', ZBX_API_HOST)
     client = ZabbixAPI(ZBX_API_HOST)
-    client.session.verify = False if ZBX_TLS_VERIFY == 'false' else True
+    if ZBX_TLS_VERIFY == 'false':
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        client.session.verify = False
     client.login(user=ZBX_API_USER, password=process_password())
     __info('Connected to Zabbix API Version {}', client.api_version())
     return client
