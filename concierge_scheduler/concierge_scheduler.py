@@ -13,6 +13,7 @@ from pyzabbix import ZabbixAPI
 from concierge_docker import DockerAdmin
 from concierge_zabbix import ZabbixAdmin
 from concierge_gcs import GCSBackup
+
 __DEFAULT_CONFIG_DIR = os.getenv('ZBX_CONFIG_DIR') or os.path.abspath(__file__)
 STORAGE_LOCATION = os.getenv('STORAGE_LOCATION', '')
 STORAGE_FOLDER = os.getenv('STORAGE_FOLDER', '')
@@ -237,6 +238,9 @@ def initiate_zabbix_client():
         __warn('TLS Verification disabled, HTTPS requests to host are unverified')
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         if ZBX_API_HOST.startswith('https'):
+            # TODO: detect_version is set to false to avoid SSL errors before authentication.
+            #  Issue with pyzabbix https://github.com/lukecyca/pyzabbix/issues/157 is pending release.
+            #  After new release, detect_version can be removed from this code
             detect_version = False
     client = ZabbixAPI(ZBX_API_HOST, detect_version=detect_version)
     client.session.verify = tls_verify
